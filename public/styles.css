@@ -168,10 +168,10 @@ body{margin:0;background:var(--bg);color:var(--ink);
 .catchip i{font-style:normal;font-size:12px;color:var(--mute);flex:none}
 .more{width:100%;background:none;border:none;color:var(--mute);font-family:Inter,sans-serif;font-size:13px;
   font-weight:500;cursor:pointer;padding:18px 0 2px;text-align:center}
-.ok{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--good-dim);
+.saved{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--good-dim);
   border-radius:16px;padding:12px 15px;margin-top:14px;font-size:12.5px;color:#7fe0ae}
-.ok b{color:#fff;font-weight:600}
-.ok button{background:none;border:none;color:#2ec27e;font-family:Inter,sans-serif;font-size:12.5px;
+.saved b{color:#fff;font-weight:600}
+.saved button{background:none;border:none;color:#2ec27e;font-family:Inter,sans-serif;font-size:12.5px;
   font-weight:600;cursor:pointer;padding:0;flex:none}
 .btn{display:block;width:100%;border:none;border-radius:var(--r-pill);padding:16px;font-family:Inter,sans-serif;
   font-size:15.5px;font-weight:600;cursor:pointer;background:#fff;color:#0a0b0d;margin-top:16px}
@@ -270,3 +270,10 @@ body{margin:0;background:var(--bg);color:var(--ink);
 .glink{display:block;width:100%;background:none;border:none;color:var(--faint);font-family:Inter,sans-serif;
   font-size:12.5px;cursor:pointer;padding:16px 0 0}
 [hidden]{display:none!important}
+
+
+/* nada puede desbordar a lo ancho en el telefono */
+html,body{max-width:100%;overflow-x:hidden}
+.stage,.phone,.scr{max-width:100%}
+.hero .big{font-size:clamp(32px,11vw,52px);word-break:break-word}
+.hero .cmp{word-break:break-word}

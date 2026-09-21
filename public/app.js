@@ -219,7 +219,7 @@ function formulario(modoEdit){
         preFon=!modoEdit&&!c&&fondos().length&&pesos>=umbral()/2,
         at=atajos();
   return `
-  ${!modoEdit&&ultimo?`<div class="ok"><span>Guardado <b>${esc(ultimo.n)}</b> · ${fmt(ultimo.a)}</span>
+  ${!modoEdit&&ultimo?`<div class="saved"><span>Guardado <b>${esc(ultimo.n)}</b> · ${fmt(ultimo.a)}</span>
     <button data-undo="1">Deshacer</button></div>`:''}
   ${!modoEdit&&at.length?`<div class="sec"><b>Lo de siempre</b><span>toca y ajusta</span></div>
   <div class="sugn atj">${at.map(e=>`<button data-at="${esc(e.n)}" data-ac="${e.cat}" data-am="${Math.round(e.med/1000)}">
