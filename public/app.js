@@ -669,10 +669,8 @@ function vCrearHogar(){
    <input class="ginput" id="hYo" placeholder="Tu nombre" autocomplete="off">
    <label class="glab">¿Cuánto pones por quincena?</label>
    <input class="ginput gnum" id="hAp" inputmode="numeric" placeholder="0">
-   <label class="glab">De eso, ¿cuánto no llega al hogar?</label>
-   <input class="ginput gnum" id="hDe" inputmode="numeric" placeholder="0">
-   <p class="gfoot" style="text-align:left;margin-top:8px">Cuotas que salen del mismo aporte pero no se
-     gastan en la casa — el préstamo del carro, por ejemplo. Si no hay ninguna, déjalo en 0.</p>
+   <p class="gfoot" style="margin-top:14px">Todo esto lo puedes cambiar después, y más adelante
+     invitas a quien viva contigo para que ponga su parte.</p>
    <button class="gbtn gp" id="bCrear">Crear mi hogar</button>
    <button class="glink" id="bSalir">Salir de esta cuenta</button>`)}
 
@@ -746,14 +744,14 @@ function mostrarLogin(msg){
 
 function mostrarCrear(){
   pinta(vCrearHogar());
-  soloNum(document.getElementById('hAp')); soloNum(document.getElementById('hDe'));
+  soloNum(document.getElementById('hAp'));
   document.getElementById('bSalir').onclick = salir;
   document.getElementById('bCrear').onclick = async (ev) => {
     ev.target.disabled = true;
     const { data, error } = await sb.rpc('crear_hogar', {
       p_nombre: document.getElementById('hNom').value.trim(),
       p_mi_nombre: document.getElementById('hYo').value.trim(),
-      p_aporte: leeNum('hAp'), p_descuento: leeNum('hDe') });
+      p_aporte: leeNum('hAp'), p_descuento: 0 });
     if (error) { ev.target.disabled = false; alert(error.message); return }
     hogarId = data; await cargar(); entraApp(); suscribir(); render();
   };
