@@ -111,7 +111,13 @@ function setModo(x){if(x===modo)return;
   modo=x;det=null;render()}
 
 const scr=document.getElementById('scr'),tabs=document.getElementById('tabs');
-function barra(){const[a,b]=lbl(i);return `<div class="top">
+function cabecera(){return `<div class="hdr">
+  <span class="hn">${esc(CFG.nombre||'Mi hogar')}</span>
+  <button class="hg" data-go2="cfg" aria-label="Ajustes">
+    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round">
+    <circle cx="12" cy="12" r="3.3"/><path d="M12 3.5v2M12 18.5v2M3.5 12h2M18.5 12h2M6 6l1.4 1.4M16.6 16.6 18 18M18 6l-1.4 1.4M7.4 16.6 6 18"/></svg>
+  </button></div>`}
+function barra(){const[a,b]=lbl(i);return cabecera()+`<div class="top">
   <button class="step" data-mv="-1" ${i===0?'disabled':''}>‹</button>
   <span class="who"><b>${a}</b><span>${b}</span></span>
   <button class="step" data-mv="1" ${i===U().length-1?'disabled':''}>›</button></div>
@@ -142,16 +148,6 @@ function vHome(){
       <span class="cw on"><em>Para gastar</em><b>${fmtK(disp)}</b></span></div>`
      :`<div class="mrow"><button class="lnk" data-go2="fon">apartar para metas y para lo que ya viene ›</button>
        <button class="lnk" data-go2="aj">meta ${fmtK(ap)} · ajustar ›</button></div>`}
-  </div>
-  <div class="acts">
-    <button class="act pri" data-go2="reg"><span class="c">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0a0b0d" stroke-width="2.4" stroke-linecap="round"><path d="M12 6v12M6 12h12"/></svg></span><span>Registrar</span></button>
-    <button class="act" data-go2="mov"><span class="c">
-      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h10"/></svg></span><span>Corregir</span></button>
-    <button class="act" data-go2="an"><span class="c">
-      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M5 19V11M12 19V5M19 19v-5"/></svg></span><span>Analizar</span></button>
-    <button class="act" data-go2="cfg"><span class="c">
-      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3.3"/><path d="M12 3.5v2M12 18.5v2M3.5 12h2M18.5 12h2M6 6l1.4 1.4M16.6 16.6 18 18M18 6l-1.4 1.4M7.4 16.6 6 18"/></svg></span><span>Ajustes</span></button>
   </div>
   <div class="two">
     <div class="card fx"><div class="l">Compromisos fijos</div>
@@ -772,7 +768,7 @@ async function cargar(){
   hogarRow = h.data || {};
   const miembros = ms.data || [];
 
-  CFG = { ...CFG, meta: +hogarRow.meta_base || 0,
+  CFG = { ...CFG, nombre: hogarRow.nombre || 'Mi hogar', meta: +hogarRow.meta_base || 0,
           hogar: miembros.map(m => ({ id:m.id, n:m.nombre, a:+m.aporte||0, d:+m.descuento||0 })) };
 
   nuevos = (ex.data||[]).map(r => ({ id:r.id, q:r.q, cat:r.cat, n:r.nombre, a:+r.monto,

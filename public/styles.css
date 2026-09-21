@@ -28,7 +28,13 @@ body{margin:0;background:var(--bg);color:var(--ink);
 .spacer{flex:1;min-height:8px}
 
 /* barra superior */
-.top{display:flex;align-items:center;gap:12px;padding:16px 0 12px;position:sticky;top:0;background:var(--bg);z-index:3}
+.hdr{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px 0 0}
+.hdr .hn{font-family:"Inter Tight",sans-serif;font-size:13.5px;font-weight:600;color:var(--mute);
+  letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.hdr .hg{width:36px;height:36px;border-radius:50%;background:var(--surf2);border:none;flex:none;
+  display:grid;place-items:center;cursor:pointer;padding:0}
+.hdr .hg:active{background:var(--surf3)}
+.top{display:flex;align-items:center;gap:12px;padding:12px 0;position:sticky;top:0;background:var(--bg);z-index:3}
 .av{width:38px;height:38px;border-radius:50%;background:var(--brand);color:#fff;display:grid;place-items:center;
   font-family:"Inter Tight",sans-serif;font-weight:700;font-size:15px;flex:none}
 .top .who{flex:1;min-width:0}
