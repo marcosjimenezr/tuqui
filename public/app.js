@@ -111,15 +111,22 @@ function setModo(x){if(x===modo)return;
   modo=x;det=null;render()}
 
 const scr=document.getElementById('scr'),tabs=document.getElementById('tabs');
+const iHoy=()=>modo==='q'?Math.max(Q.indexOf(qHoy()),0):new Date().getMonth();
+const enHoy=()=>i===iHoy();
+function diasRest(){const d=new Date(),dia=d.getDate(),
+  ultimo=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();
+  const fin=modo==='m'?ultimo:(dia<=15?15:ultimo);
+  return Math.max(fin-dia+1,0)}
 function cabecera(){return `<div class="hdr">
   <span class="hn">${esc(CFG.nombre||'Mi hogar')}</span>
+  ${(view==='home'||view==='mov'||view==='an')&&!enHoy()?'<button class="hoyb" data-hoy="1">Hoy</button>':''}
   <button class="hg" data-go2="cfg" aria-label="Ajustes">
     <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round">
     <circle cx="12" cy="12" r="3.3"/><path d="M12 3.5v2M12 18.5v2M3.5 12h2M18.5 12h2M6 6l1.4 1.4M16.6 16.6 18 18M18 6l-1.4 1.4M7.4 16.6 6 18"/></svg>
   </button></div>`}
 function barra(){const[a,b]=lbl(i);return cabecera()+`<div class="top">
   <button class="step" data-mv="-1" ${i===0?'disabled':''}>‹</button>
-  <span class="who"><b>${a}</b><span>${b}</span></span>
+  <span class="who"><b>${a}${enHoy()?'<i class="hoy">hoy</i>':''}</b><span>${b}</span></span>
   <button class="step" data-mv="1" ${i===U().length-1?'disabled':''}>›</button></div>
   <div class="seg"><button data-modo="q" class="${modo==='q'?'on':''}">Quincena</button>
   <button data-modo="m" class="${modo==='m'?'on':''}">Mes</button></div>`}
@@ -139,6 +146,10 @@ function vHome(){
     <div class="lb">${over?'Se pasaron por':'Les queda'}</div>
     <div class="big">${fmt(Math.abs(disp-tl))}</div>
     <div class="cmp">Gastaron <b>${fmt(tl)}</b> de <b>${fmt(disp)}</b>${tf?` · <b>${fmt(tf)}</b> salió de fondos`:''}</div>
+    ${(()=>{const dr=diasRest();
+      if(!enHoy()||!dr)return '';
+      if(tl>disp)return `<div class="pace">Quedan <b>${dr} ${dr===1?'día':'días'}</b> de esta ${modo==='q'?'quincena':'mes'}.</div>`;
+      return `<div class="pace">Quedan <b>${dr} ${dr===1?'día':'días'}</b> · pueden gastar <b>${fmt((disp-tl)/dr)}</b> al día</div>`})()}
     <div class="meter"><i class="f" style="width:${Math.min(tl,disp)/esc2*100}%"></i>
       ${over?`<i class="x" style="left:${disp/esc2*100}%;width:${(tl-disp)/esc2*100}%"></i>`:''}
       <u style="left:calc(${disp/esc2*100}% - 1px)"></u></div>
@@ -514,6 +525,7 @@ function render(){
     n.onblur=()=>{setTimeout(()=>{if(conceptos[clave(nota)])render()},180)};
     pintaSug()}}
   scr.querySelectorAll('[data-mv]').forEach(b=>b.onclick=()=>{i+=+b.dataset.mv;det=null;render()});
+  scr.querySelectorAll('[data-hoy]').forEach(b=>b.onclick=()=>{i=iHoy();det=null;render()});
   scr.querySelectorAll('[data-modo]').forEach(b=>b.onclick=()=>setModo(b.dataset.modo));
   scr.querySelectorAll('[data-cat]').forEach(b=>b.onclick=()=>{det=b.dataset.cat;render()});
   scr.querySelectorAll('[data-back]').forEach(b=>b.onclick=()=>{det=null;render()});
