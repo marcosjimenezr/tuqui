@@ -640,7 +640,7 @@ const uid4 = () => (crypto.randomUUID ? crypto.randomUUID()
   : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
       const r = Math.random()*16|0; return (c==='x'?r:(r&0x3|0x8)).toString(16)}));
 
-let sb = null, sesion = null, hogarId = null, hogarRow = null, gate = null;
+let sb = null, sesion = null, hogarId = null, hogarRow = null, gate = null, pendMail = null;
 
 /* ---------- pantallas de cuenta ---------- */
 function gateHTML(inner){ return `<div class="gate"><div class="gcard">
@@ -666,6 +666,19 @@ function vLogin(msg){
    <button class="gbtn gp" id="bMail">Enviarme un enlace para entrar</button>
    <p class="gfoot">Sin contraseñas: te llega un enlace al correo y entras con un toque.<br>
      Tus gastos solo los ves tú y quien invites a tu hogar.</p>`)}
+
+function vCodigo(email, msg){
+  return gateHTML(`
+   <h1>Revisa tu correo</h1>
+   <p class="gsub">Le mandamos un código de 6 dígitos a<br><b style="color:var(--ink)">${esc(email)}</b></p>
+   ${msg?`<div class="gmsg">${msg}</div>`:''}
+   <input class="gcode" id="gcod" inputmode="numeric" autocomplete="one-time-code"
+     maxlength="6" placeholder="000000" enterkeyhint="go">
+   <button class="gbtn gp" id="bCod">Entrar</button>
+   <button class="glink" id="bResend">No me llegó — enviar otro</button>
+   <button class="glink" id="bOtro">Usar otro correo</button>
+   <p class="gfoot">Escribe el código aquí mismo, en la app. Si abres el enlace del correo,
+     la sesión se queda en el navegador y no en la app instalada.</p>`)}
 
 function vCrearHogar(){
   return gateHTML(`
@@ -742,12 +755,35 @@ function mostrarLogin(msg){
   const enviar = async () => {
     const email = (mail.value||'').trim();
     if (!/.+@.+\..+/.test(email)) { mail.focus(); return }
-    const { error } = await sb.auth.signInWithOtp({ email, options:{ emailRedirectTo: dest } });
-    mostrarLogin(error ? error.message
-      : `Te enviamos un enlace a <b>${email}</b>. Ábrelo en este mismo teléfono.`);
+    const { error } = await sb.auth.signInWithOtp({ email,
+      options:{ emailRedirectTo: dest, shouldCreateUser: true } });
+    if (error) { mostrarLogin(error.message); return }
+    pendMail = email; mostrarCodigo();
   };
   document.getElementById('bMail').onclick = enviar;
   mail.onkeydown = e => { if (e.key === 'Enter') enviar() };
+}
+
+function mostrarCodigo(msg){
+  pinta(vCodigo(pendMail, msg));
+  const inp = document.getElementById('gcod');
+  const entrar = async () => {
+    const token = (inp.value||'').replace(/\D/g,'');
+    if (token.length < 6) { inp.focus(); return }
+    const btn = document.getElementById('bCod'); btn.disabled = true; btn.textContent = 'Entrando…';
+    const { error } = await sb.auth.verifyOtp({ email: pendMail, token, type: 'email' });
+    if (error) { mostrarCodigo('Ese código no sirvió. Revisa que esté completo y sin espacios, o pide otro.'); return }
+    pendMail = null; ruta();
+  };
+  document.getElementById('bCod').onclick = entrar;
+  inp.oninput = e => { const d = e.target.value.replace(/\D/g,'').slice(0,6);
+    e.target.value = d; if (d.length === 6) entrar() };
+  document.getElementById('bResend').onclick = async () => {
+    await sb.auth.signInWithOtp({ email: pendMail, options:{ shouldCreateUser: true } });
+    mostrarCodigo('Listo, va otro código en camino.');
+  };
+  document.getElementById('bOtro').onclick = () => { pendMail = null; mostrarLogin() };
+  inp.focus();
 }
 
 function mostrarCrear(){
