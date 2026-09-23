@@ -664,16 +664,16 @@ function vLogin(msg){
    <input class="ginput" id="gmail" type="email" inputmode="email" autocomplete="email"
      placeholder="tu@correo.com" enterkeyhint="go">
    <button class="gbtn gp" id="bMail">Enviarme el código</button>
-   <p class="gfoot">Sin contraseñas: te llega un código de 6 dígitos al correo y lo escribes aquí.<br>
+   <p class="gfoot">Sin contraseñas: te llega un código al correo y lo escribes aquí.<br>
      Tus gastos solo los ves tú y quien invites a tu hogar.</p>`)}
 
 function vCodigo(email, msg){
   return gateHTML(`
    <h1>Revisa tu correo</h1>
-   <p class="gsub">Le mandamos un código de 6 dígitos a<br><b style="color:var(--ink)">${esc(email)}</b></p>
+   <p class="gsub">Le mandamos un código a<br><b style="color:var(--ink)">${esc(email)}</b></p>
    ${msg?`<div class="gmsg">${msg}</div>`:''}
    <input class="gcode" id="gcod" inputmode="numeric" autocomplete="one-time-code"
-     maxlength="6" placeholder="000000" enterkeyhint="go">
+     maxlength="10" placeholder="• • • • • •" enterkeyhint="go">
    <button class="gbtn gp" id="bCod">Entrar</button>
    <button class="glink" id="bResend">No me llegó — enviar otro</button>
    <button class="glink" id="bOtro">Usar otro correo</button>
@@ -786,8 +786,8 @@ function mostrarCodigo(msg){
     pendMail = null; ruta();
   };
   document.getElementById('bCod').onclick = entrar;
-  inp.oninput = e => { const d = e.target.value.replace(/\D/g,'').slice(0,6);
-    e.target.value = d; if (d.length === 6) entrar() };
+  inp.oninput = e => { const d = e.target.value.replace(/\D/g,'').slice(0,10);
+    e.target.value = d; if (d.length === 6 || d.length === 8) entrar() };
   document.getElementById('bResend').onclick = async () => {
     await sb.auth.signInWithOtp({ email: pendMail, options:{ shouldCreateUser: true } });
     mostrarCodigo('Listo, va otro código en camino.');
