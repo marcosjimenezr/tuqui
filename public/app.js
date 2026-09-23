@@ -663,8 +663,8 @@ function vLogin(msg){
    ${(CFGX.GOOGLE||CFGX.APPLE)?'<div class="gor"><span>o</span></div>':''}
    <input class="ginput" id="gmail" type="email" inputmode="email" autocomplete="email"
      placeholder="tu@correo.com" enterkeyhint="go">
-   <button class="gbtn gp" id="bMail">Enviarme un enlace para entrar</button>
-   <p class="gfoot">Sin contraseñas: te llega un enlace al correo y entras con un toque.<br>
+   <button class="gbtn gp" id="bMail">Enviarme el código</button>
+   <p class="gfoot">Sin contraseñas: te llega un código de 6 dígitos al correo y lo escribes aquí.<br>
      Tus gastos solo los ves tú y quien invites a tu hogar.</p>`)}
 
 function vCodigo(email, msg){
@@ -677,8 +677,8 @@ function vCodigo(email, msg){
    <button class="gbtn gp" id="bCod">Entrar</button>
    <button class="glink" id="bResend">No me llegó — enviar otro</button>
    <button class="glink" id="bOtro">Usar otro correo</button>
-   <p class="gfoot">Escribe el código aquí mismo, en la app. Si abres el enlace del correo,
-     la sesión se queda en el navegador y no en la app instalada.</p>`)}
+   <p class="gfoot">El código vence en 10 minutos. Si no lo ves, mira en spam
+     o en Promociones.</p>`)}
 
 function vCrearHogar(){
   return gateHTML(`
@@ -755,13 +755,23 @@ function mostrarLogin(msg){
   const enviar = async () => {
     const email = (mail.value||'').trim();
     if (!/.+@.+\..+/.test(email)) { mail.focus(); return }
+    const bt = document.getElementById('bMail');
+    bt.disabled = true; bt.textContent = 'Enviando\u2026';
     const { error } = await sb.auth.signInWithOtp({ email,
       options:{ emailRedirectTo: dest, shouldCreateUser: true } });
-    if (error) { mostrarLogin(error.message); return }
+    if (error) { mostrarLogin(humano(error.message)); return }
     pendMail = email; mostrarCodigo();
   };
   document.getElementById('bMail').onclick = enviar;
   mail.onkeydown = e => { if (e.key === 'Enter') enviar() };
+}
+
+function humano(m){
+  const t = String(m||'');
+  if (/rate limit/i.test(t)) return 'Ya pediste varios c\u00f3digos seguidos. Espera un momento y vuelve a intentar.';
+  if (/sending|smtp/i.test(t)) return 'No pudimos mandar el correo en este momento. Intenta otra vez en un minuto.';
+  if (/invalid/i.test(t) && /email/i.test(t)) return 'Ese correo no parece v\u00e1lido.';
+  return 'No pudimos enviarlo. Intenta de nuevo.';
 }
 
 function mostrarCodigo(msg){
