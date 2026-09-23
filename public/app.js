@@ -952,4 +952,26 @@ tabs.onclick = e => {
   view = v; det = null; render();
 };
 
+// --- actualizacion automatica -------------------------------------
+// En iOS una app instalada puede quedarse viva en memoria y no recargar
+// nunca. Esto compara la version publicada con la que esta corriendo y,
+// si cambio, limpia el cache y recarga.
+const MIVER = (document.querySelector('meta[name=tuqui-version]')||{}).content || '';
+let _chk = 0;
+async function revisaVersion(){
+  const ahora = Date.now(); if (ahora - _chk < 60000) return; _chk = ahora;
+  try{
+    const r = await fetch('index.html?v=' + ahora, { cache:'no-store' });
+    const t = await r.text();
+    const m = t.match(/tuqui-version"\s+content="([^"]+)"/);
+    if (m && MIVER && m[1] !== MIVER){
+      if (self.caches) { const ks = await caches.keys(); await Promise.all(ks.map(k=>caches.delete(k))) }
+      location.reload();
+    }
+  }catch(e){}
+}
+document.addEventListener('visibilitychange', () => { if (!document.hidden) revisaVersion() });
+window.addEventListener('focus', revisaVersion);
+setTimeout(revisaVersion, 4000);
+
 window.addEventListener('DOMContentLoaded', arranque);

@@ -1,7 +1,7 @@
 // TUQUI · service worker mínimo.
 // Solo cachea el caparazón para que la app abra rápido e instale como PWA.
 // Los datos NUNCA se cachean: van siempre contra Supabase, con la sesión del usuario.
-const CACHE = 'tuqui-v1';
+const CACHE = 'tuqui-v2';
 const SHELL = ['./', './index.html', './styles.css', './app.js', './config.js',
                './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 
