@@ -72,6 +72,35 @@ function conocidos(){const m={};
     e.med=e.a[Math.floor(e.a.length/2)];
     e.cat=Object.keys(e.c).sort((x,y)=>e.c[y]-e.c[x])[0];
     e.mix=Object.keys(e.c).length>1;return e}).sort((a,b)=>b.v-a.v)}
+// --- recurrencia ---------------------------------------------------
+// Un concepto es recurrente cuando ya aparecio en dos periodos distintos
+// y el hueco entre ellos es constante: una quincena o un mes.
+let _rec=null;
+function recurrentes(){
+  if(_rec)return _rec;
+  const m={};
+  todos().forEach(g=>{const k=clave(g.n);if(!k)return;
+    const e=m[k]=m[k]||{k,n:g.n,cat:g.cat,qs:[],as:[]};
+    const x=qi(g);if(x>=0&&e.qs.indexOf(x)<0)e.qs.push(x);
+    e.as.push(g.a);e.n=g.n;e.cat=g.cat});
+  return _rec=Object.values(m).filter(e=>e.qs.length>=2).map(e=>{
+    e.qs.sort((a,b)=>a-b);
+    const d=[];for(let j=1;j<e.qs.length;j++)d.push(e.qs[j]-e.qs[j-1]);
+    d.sort((a,b)=>a-b);
+    e.cada=d[Math.floor(d.length/2)];
+    e.ult=e.qs[e.qs.length-1];
+    const v=e.as.slice().sort((a,b)=>a-b);
+    e.med=v[Math.floor(v.length/2)];
+    return e}).filter(e=>e.cada===1||e.cada===2)}
+const recMap=()=>Object.fromEntries(recurrentes().map(e=>[e.k,e]));
+const cadaTxt=c=>c===1?'cada quincena':'cada mes';
+// Recurrentes que ya tocaban en este periodo y todavia no se han registrado.
+function pendientes(){
+  if(modo!=='q'||!enHoy())return [];
+  const hay={};items(i).forEach(g=>hay[clave(g.n)]=1);
+  return recurrentes().filter(e=>!hay[e.k]&&e.ult+e.cada<=i)
+    .sort((a,b)=>b.med-a.med)}
+
 function sugNombres(t){const q=clave(t);if(q.length<2)return [];
   return conocidos().filter(e=>{const k=clave(e.n);return k!==q&&k.includes(q)}).slice(0,6)}
 function umbral(){const v=todos().map(g=>g.a).sort((a,b)=>a-b);
@@ -159,6 +188,14 @@ function vHome(){
      :`<div class="mrow"><button class="lnk" data-go2="fon">apartar para metas y para lo que ya viene ›</button>
        <button class="lnk" data-go2="aj">meta ${fmtK(ap)} · ajustar ›</button></div>`}
   </div>
+  ${(()=>{const pd=pendientes();if(!pd.length)return '';
+    const sp=pd.reduce((a,e)=>a+e.med,0);
+    return `<div class="sec"><b>Todavía no ha llegado</b><span>${fmt(sp)} aprox.</span></div>
+    ${pd.map(e=>`<button class="row pend" data-pend="${esc(e.k)}">
+      <span class="ic" style="background:${(CM[e.cat]||{c:'#5f666e'}).c}">${(CM[e.cat]||{n:'?'}).n[0]}</span>
+      <span class="tx"><b>${esc(e.n)}</b><span>${cadaTxt(e.cada)} · suele ser ${fmt(e.med)}</span></span>
+      <span class="amt" style="font-size:13px;color:var(--brand);font-weight:500">Registrar</span></button>`).join('')}
+    <p class="hint">Son cosas que ya vienen repitiéndose. Si alguna no aplica este periodo, ignórala — desaparece sola.</p>`})()}
   <div class="sec"><b>Por categoría</b><span>vs. su promedio</span></div>
   ${list.length?list.map(x=>`<button class="row" data-cat="${x.c.id}">
     <span class="ic" style="background:${x.c.c}">${x.c.n[0]}</span>
@@ -169,10 +206,11 @@ function vHome(){
   <p class="hint">La línea clara en cada barra es el promedio de ${modo==='q'?'las quincenas':'los meses'} anteriores.</p>
   <div class="spacer"></div>`}
 
-function fila(g,sub){const an=g.cob>1;
+function fila(g,sub){const an=g.cob>1,rc=recMap()[clave(g.n)];
   return `<button class="row" data-edit="${g.k}">
   <span class="ic" style="background:${CM[g.cat].c}">${CM[g.cat].n[0]}</span>
-  <span class="tx"><b>${esc(g.n)}${an?`<span class="tag an">${g.cob} meses</span>`:''}</b>
+  <span class="tx"><b>${esc(g.n)}${an?`<span class="tag an">${g.cob} meses</span>`:''}${
+    !an&&rc?`<span class="tag rc">\u21bb ${cadaTxt(rc.cada)}</span>`:''}</b>
   <span>${an?fmt(g.a/per(g))+' por quincena · cubre hasta '+hastaQ(g).toLowerCase():sub}</span></span>
   <span class="amt">${fmt(g.a)}</span></button>`}
 
@@ -501,7 +539,7 @@ function vAprend(){const cs=Object.values(conceptos);
  <div class="spacer"></div>`}
 
 function render(){
-  _cc=null;
+  _cc=null;_rec=null;
   [...tabs.children].forEach(b=>b.classList.toggle('on',b.dataset.go===view));
   const y=scr.scrollTop;
   if(view==='aj'&&!AJ)AJ={...CFG,hogar:H().map(x=>({...x}))};
@@ -511,6 +549,10 @@ function render(){
     n.oninput=e=>{nota=e.target.value;pintaSug()};
     n.onblur=()=>{setTimeout(()=>{if(conceptos[clave(nota)])render()},180)};
     pintaSug()}}
+  scr.querySelectorAll('[data-pend]').forEach(b=>b.onclick=()=>{
+    const e=recMap()[b.dataset.pend];if(!e)return;
+    amt=String(e.med);cat=e.cat;nota=e.n;cob=1;fon='';por='';
+    catOpen=false;detOpen=false;ultimo=null;view='reg';det=null;render()});
   scr.querySelectorAll('[data-mv]').forEach(b=>b.onclick=()=>{i+=+b.dataset.mv;det=null;render()});
   scr.querySelectorAll('[data-hoy]').forEach(b=>b.onclick=()=>{i=iHoy();det=null;render()});
   scr.querySelectorAll('[data-modo]').forEach(b=>b.onclick=()=>setModo(b.dataset.modo));

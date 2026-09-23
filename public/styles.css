@@ -136,6 +136,9 @@ body{margin:0;background:var(--bg);color:var(--ink);
   border-radius:99px;padding:2px 7px;margin-left:6px;vertical-align:1px;background:var(--brand-dim);color:var(--brand)}
 .tag.ed{background:var(--surf3);color:var(--mute)}
 .tag.an{background:#12303a;color:#4cc4e8}
+.tag.rc{background:var(--surf3);color:var(--mute);text-transform:none;letter-spacing:0}
+.row.pend .ic{opacity:.55}
+.row.pend b{color:var(--mute)}
 .mini-bar{height:3px;border-radius:99px;background:var(--surf2);margin-top:6px;overflow:visible;position:relative}
 .mini-bar i{position:absolute;left:0;top:0;bottom:0;border-radius:99px}
 .mini-bar u{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--faint);border-radius:2px}
