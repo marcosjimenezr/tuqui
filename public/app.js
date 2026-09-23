@@ -916,4 +916,11 @@ async function invitar(email, memberId){
   return location.origin + location.pathname + '?inv=' + data.codigo;
 }
 
+tabs.onclick = e => {
+  const b = e.target.closest('.tab'); if (!b) return;
+  const v = b.dataset.go; if (!v) return;
+  if (v === 'reg') { amt=''; cat=null; nota=''; cob=1; fon=''; por=''; catOpen=false; detOpen=false; ultimo=null }
+  view = v; det = null; render();
+};
+
 window.addEventListener('DOMContentLoaded', arranque);
