@@ -211,7 +211,7 @@ function bloqueCob(){
   <div class="pills">${[[1,'No, es de ahora'],[3,'3 meses'],[6,'6 meses'],[12,'12 meses']].map(([v,t])=>
     `<button class="pill ${cob===v?'sel':''}" data-cob="${v}">${t}</button>`).join('')}</div>
   ${cob>1?`<p class="hint">Se registra completo hoy — la plata salió hoy. Pero para los promedios cuenta como
-   <b>${fmt(+amt*1000/(cob*2))}</b> por quincena, para que no distorsione lo que sigue.</p>`:''}`}
+   <b>${fmt(+amt/(cob*2))}</b> por quincena, para que no distorsione lo que sigue.</p>`:''}`}
 
 function bloqueFon(){if(!fondos().length)return '';
   return `<div class="sec"><b>¿Sale de un fondo?</b></div>
@@ -221,7 +221,7 @@ function bloqueFon(){if(!fondos().length)return '';
    <b>${esc(FM()[fon].n)}</b>, que hoy tiene ${fmt(saldo(FM()[fon],qIdx()))}.</p>`:''}`}
 
 function formulario(modoEdit){
-  const pesos=+amt*1000, c=conceptos[clave(nota)], km=CM[cat],
+  const pesos=+amt||0, c=conceptos[clave(nota)], km=CM[cat],
         preCob=!modoEdit&&!c&&pesos>=umbral(),
         preFon=!modoEdit&&!c&&fondos().length&&pesos>=umbral()/2,
         at=atajos();
@@ -229,14 +229,14 @@ function formulario(modoEdit){
   ${!modoEdit&&ultimo?`<div class="saved"><span>Guardado <b>${esc(ultimo.n)}</b> · ${fmt(ultimo.a)}</span>
     <button data-undo="1">Deshacer</button></div>`:''}
   ${!modoEdit&&at.length?`<div class="sec"><b>Lo de siempre</b><span>toca y ajusta</span></div>
-  <div class="sugn atj">${at.map(e=>`<button data-at="${esc(e.n)}" data-ac="${e.cat}" data-am="${Math.round(e.med/1000)}">
+  <div class="sugn atj">${at.map(e=>`<button data-at="${esc(e.n)}" data-ac="${e.cat}" data-am="${Math.round(e.med)}">
     <span class="k" style="background:${(CM[e.cat]||{c:'#5f666e'}).c}"></span>
     <span><b>${esc(e.n)}</b><em>${fmtK(e.med)} de costumbre</em></span></button>`).join('')}</div>`:''}
-  <div class="sec"><b>¿Cuánto?</b><span>en miles</span></div>
+  <div class="sec"><b>¿Cuánto?</b><span>en pesos</span></div>
   <div class="amtw"><span class="cur">$</span>
     <input class="amtin" id="amt" inputmode="numeric" enterkeyhint="next" placeholder="0"
       value="${amt?(+amt).toLocaleString('es-CO'):''}"></div>
-  <div class="amtp" id="amtp">${pesos?fmt(pesos):'escribe 135 y son $135.000'}</div>
+  <div class="amtp" id="amtp">${pesos?'':'escribe el valor completo, por ejemplo 135000'}</div>
   <div class="sec"><b>¿Qué fue?</b></div>
   <input class="field" id="nota" placeholder="Rappi, Pricesmart, Urleny…" value="${esc(nota)}"
     autocomplete="off" enterkeyhint="done">
@@ -549,11 +549,11 @@ function render(){
   scr.querySelectorAll('[data-gaj]').forEach(b=>b.onclick=guardarAj);
   scr.querySelectorAll('[data-rmeta]').forEach(b=>b.onclick=()=>quitarMeta(b.dataset.rmeta));
   {const a=document.getElementById('amt');if(a){a.oninput=e=>{
-     const d=e.target.value.replace(/\D/g,'').replace(/^0+/,'').slice(0,9);amt=d;
+     const d=e.target.value.replace(/\D/g,'').replace(/^0+/,'').slice(0,12);amt=d;
      e.target.value=d?(+d).toLocaleString('es-CO'):'';
-     const pv=document.getElementById('amtp');if(pv)pv.textContent=d?fmt(+d*1000):'escribe 135 y son $135.000';
+     const pv=document.getElementById('amtp');if(pv)pv.textContent=d?'':'escribe el valor completo, por ejemplo 135000';
      const gb=document.getElementById('gb');if(gb)gb.disabled=!(amt&&cat)};
-     a.onblur=()=>{if((+amt*1000>=umbral())||fondos().length)render()}}}
+     a.onblur=()=>{if((+amt>=umbral())||fondos().length)render()}}}
   scr.querySelectorAll('[data-pick]').forEach(b=>b.onclick=()=>{cat=b.dataset.pick;catOpen=false;render()});
   scr.querySelectorAll('[data-catopen]').forEach(b=>b.onclick=()=>{catOpen=true;render()});
   scr.querySelectorAll('[data-more]').forEach(b=>b.onclick=()=>{detOpen=!detOpen;render()});
@@ -598,13 +598,13 @@ function render(){
   scr.scrollTop=(key===lastKey)?y:0; lastKey=key;
 }
 function abrirEdit(k){const g=todos().find(x=>x.k===k);if(!g)return;
-  editKey=k;amt=String(Math.round(g.a/1000));cat=g.cat;por=idPor(g.por);cob=g.cob||1;fon=g.fon||'';nota=g.n;
+  editKey=k;amt=String(Math.round(g.a));cat=g.cat;por=idPor(g.por);cob=g.cob||1;fon=g.fon||'';nota=g.n;
   catOpen=false;detOpen=false;ultimo=null;view='edit';det=null;render()}
 async function guardar(){
   const q=modo==='q'?Q[i]:MES[i]+' 2';
   const nom=nota.trim()||CM[cat].n, kk=clave(nom), c=conceptos[kk],
         cb=(c&&cob===1)?(c.cob||1):cob, fn=(c&&!fon)?(c.fon||''):fon;
-  const g={id:uid4(),q,cat,a:+amt*1000,n:nom,por,cob:cb,fon:fn,at:new Date().toISOString()};
+  const g={id:uid4(),q,cat,a:+amt,n:nom,por,cob:cb,fon:fn,at:new Date().toISOString()};
   nuevos.push(g);
   if(kk&&(cb>1||fn)&&(!c||c.cob!==cb||c.fon!==fn)){const doc={k:kk,n:nom,cob:cb,fon:fn};conceptos[kk]=doc;
     if(db){try{await db.collection('conceptos').doc(kk).set(doc)}catch(e){}}}
@@ -616,7 +616,7 @@ async function deshacer(){if(!ultimo)return;const id=ultimo.id;
   nuevos=nuevos.filter(g=>g.id!==id);ultimo=null;render();
   if(db){try{await db.collection('gastos').doc(id).delete()}catch(e){}}}
 async function guardarEdit(){
-  const upd={cat,a:+amt*1000,n:nota.trim()||CM[cat].n,por,cob,fon},k=editKey;
+  const upd={cat,a:+amt,n:nota.trim()||CM[cat].n,por,cob,fon},k=editKey;
   if(k[0]==='s'){overrides[k]={...(overrides[k]||{}),...upd};
     if(db){try{await db.collection('ediciones').doc(k).set({...overrides[k],k})}catch(e){}}}
   else{const j=nuevos.findIndex(x=>x.id===k);
