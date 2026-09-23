@@ -98,7 +98,6 @@ const tot=k=>items(k).reduce((s,g)=>s+g.a,0);
 const totLibre=k=>items(k).filter(g=>!g.fon).reduce((s,g)=>s+g.a,0);
 const totFondo=k=>items(k).filter(g=>g.fon).reduce((s,g)=>s+g.a,0);
 const catTot=(k,c)=>items(k).filter(g=>g.cat===c).reduce((s,g)=>s+g.a,0);
-const fijos=k=>items(k).filter(g=>CM[g.cat]&&CM[g.cat].f).reduce((s,g)=>s+g.a,0);
 const prom=c=>{const n=Math.min(i,modo==='q'?6:3);if(n<1)return 0;let s=0;
   for(let k=i-n;k<i;k++)s+=costo(k,c);return s/n};
 const fmt=v=>'$'+Math.round(v).toLocaleString('es-CO');
@@ -136,7 +135,7 @@ function topSimple(t,s,back){return `<div class="top">
   <span style="width:34px"></span></div>`}
 
 function vHome(){
-  const t=tot(i),fx=fijos(i),dd=t-fx,ap=APORTE(),
+  const t=tot(i),ap=APORTE(),
         pv=prov(i),disp=Math.max(ap-pv,0),tl=totLibre(i),tf=totFondo(i),
         over=tl>disp,esc2=Math.max(disp,tl)*1.06||1;
   const list=CATS.map(c=>({c,v:catTot(i,c.id),p:prom(c.id)})).filter(x=>x.v>0).sort((a,b)=>b.v-a.v);
@@ -159,16 +158,6 @@ function vHome(){
       <span class="cw on"><em>Para gastar</em><b>${fmtK(disp)}</b></span></div>`
      :`<div class="mrow"><button class="lnk" data-go2="fon">apartar para metas y para lo que ya viene ›</button>
        <button class="lnk" data-go2="aj">meta ${fmtK(ap)} · ajustar ›</button></div>`}
-  </div>
-  <div class="two">
-    <div class="card fx"><div class="l">Compromisos fijos</div>
-      <div class="d">Llegan sí o sí, no se deciden cada mes</div>
-      <div class="v">${fmt(fx)}</div><div class="sh"><i style="width:${t?fx/t*100:0}%"></i></div>
-      <div class="pc">${t?Math.round(fx/t*100):0}% de lo gastado</div></div>
-    <div class="card"><div class="l">Día a día</div>
-      <div class="d">Aquí sí se puede decidir algo y manejarlo</div>
-      <div class="v">${fmt(dd)}</div><div class="sh"><i style="width:${t?dd/t*100:0}%"></i></div>
-      <div class="pc">${t?Math.round(dd/t*100):0}% de lo gastado</div></div>
   </div>
   <div class="sec"><b>Por categoría</b><span>vs. su promedio</span></div>
   ${list.length?list.map(x=>`<button class="row" data-cat="${x.c.id}">
@@ -271,7 +260,7 @@ function vEdit(){const g=todos().find(x=>x.k===editKey);
   return topSimple('Corregir gasto','registrado por ustedes','mov')+formulario(true)}
 
 function vAn(){
-  const t=tot(i),fx=fijos(i),dd=t-fx,ap=Math.max(APORTE()-prov(i),0);
+  const t=tot(i),ap=Math.max(APORTE()-prov(i),0);
   if(!t)return barra()+'<p class="hint">Registra algunos gastos y aquí aparece la lectura del periodo.</p><div class="spacer"></div>';
   const gaps=CATS.map(c=>({c,v:costo(i,c.id),p:prom(c.id)})).filter(x=>x.p>0).map(x=>({...x,d:x.v-x.p})).sort((a,b)=>b.d-a.d);
   const peor=gaps[0],cub=cubiertos();
@@ -281,8 +270,6 @@ function vAn(){
    :`<div class="ins good"><h4>Van dentro de la meta</h4><p>Gastaron ${fmt(t)} y quedan <span class="a">${fmt(ap-t)}</span>.</p></div>`}
   ${peor&&peor.d>0?`<div class="ins"><h4>Lo que se salió de lo normal</h4>
     <p><b>${peor.c.n}</b> va en <span class="a">${fmt(peor.v)}</span> contra un promedio de ${fmt(peor.p)}. Son ${fmt(peor.d)} de más.</p></div>`:''}
-  <div class="ins"><h4>Cuánto ya estaba decidido</h4>
-    <p>De ${fmt(t)}, <b>${fmt(fx)}</b> son compromisos fijos. Sobre ${fmt(dd)} es que realmente se puede decidir algo${dd>ap?' — más que el aporte entero':', el '+Math.round(dd/ap*100)+'% del aporte'}.</p></div>
   ${cub.length?`<div class="ins good"><h4>Ya está pagado</h4>
     <p>Esto lo pagaron por adelantado y todavía les cubre:</p>
     ${cub.map(g=>`<div class="cov"><span>${esc(g.n)}<em>hasta ${hastaQ(g).toLowerCase()}</em></span>
