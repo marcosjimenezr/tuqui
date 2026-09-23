@@ -17,8 +17,8 @@ let CFG={a1:1250000,a2:1250000,desc:500000,p1:'Mark',p2:'Esposa',meta:DEFMETA};
 let metas=[];
 const COLP=['#e0536b','#5b8def','#3ecf8e','#e5b567','#a78bfa','#2bb3a3'];
 function H(){if(CFG.hogar&&CFG.hogar.length)return CFG.hogar;
-  return [{id:'p1',n:CFG.p1||'Yo',a:+CFG.a1||0,d:Math.round((+CFG.desc||0)/2)},
-          {id:'p2',n:CFG.p2||'Pareja',a:+CFG.a2||0,d:Math.round((+CFG.desc||0)/2)}]}
+  return [{id:'p1',n:CFG.p1||'Yo',a:+CFG.a1||0,d:0},
+          {id:'p2',n:CFG.p2||'Pareja',a:+CFG.a2||0,d:0}]}
 const PERS=()=>H().map(p=>p.n);
 const idPor=v=>(typeof v==='number')?((H()[v]||{}).id||''):(v||'');
 const perPor=v=>{const id=idPor(v);return H().find(p=>p.id===id)||null};
@@ -324,7 +324,7 @@ function sugerida(){const T=todos(),v=[];
   return Math.round(med/50000)*50000}
 const sumaAp=()=>(AJ.hogar||[]).reduce((s,p)=>s+(+p.a||0),0);
 const sumaDesc=()=>(AJ.hogar||[]).reduce((s,p)=>s+(+p.d||0),0);
-const metaAJ=()=>Math.max(sumaAp()-sumaDesc(),0);
+const metaAJ=()=>sumaAp();
 const miles=v=>v?(+v).toLocaleString('es-CO'):'';
 
 function vAjustes(){
@@ -342,13 +342,11 @@ function vAjustes(){
     </div>
     <div class="pl"><span>Aporta por quincena</span>
       <input data-pa="${k}" inputmode="numeric" value="${miles(pp.a)}" placeholder="0"></div>
-    <div class="pl"><span>De eso, no llega al hogar<em>cuotas que salen del aporte pero no se gastan en la casa</em></span>
-      <input data-pd="${k}" inputmode="numeric" value="${miles(pp.d)}" placeholder="0"></div>
   </div>`).join('')}
   <button class="addp" data-addp="1">+ Agregar otra persona</button>
   <div class="goal"><div class="l">Meta de la quincena</div>
     <div class="v" id="mv">${fmt(m)}</div>
-    <div class="d" id="md">${fmt(sumaAp())} aportados \u2212 ${fmt(sumaDesc())} que no llegan</div></div>
+    <div class="d" id="md">${hs.length>1?'la suma de lo que ponen entre '+hs.length:'lo que pones t\u00fa'}</div></div>
   ${sug&&dif>0.08?`<div class="ins"><h4>Lo que dice su historial</h4>
     <p>En sus \u00faltimas quincenas gastaron <span class="a">${fmt(sug)}</span>, y la meta de arriba est\u00e1 en ${fmt(m)}.
     ${sug>m?'Con esta meta van a ir cortos casi todas las quincenas.':'La meta les est\u00e1 quedando holgada frente a lo que gastan.'}</p>
@@ -366,8 +364,9 @@ function vAjustes(){
 
 function pintaMeta(){const a=document.getElementById('mv'),b=document.getElementById('md');
   if(a)a.textContent=fmt(metaAJ());
-  if(b)b.textContent=fmt(sumaAp())+' aportados \u2212 '+fmt(sumaDesc())+' que no llegan'}
-function usarSug(v){const need=v+sumaDesc(),hs=AJ.hogar,tot=sumaAp();
+  if(b){const n=(AJ.hogar||[]).length;
+    b.textContent=n>1?'la suma de lo que ponen entre '+n:'lo que pones t\u00fa'}}
+function usarSug(v){const need=v,hs=AJ.hogar,tot=sumaAp();
   let queda=need;
   hs.forEach((pp,k)=>{const r=tot?(+pp.a||0)/tot:1/hs.length;
     if(k<hs.length-1){pp.a=Math.round(need*r/10000)*10000;queda-=pp.a}
@@ -378,9 +377,9 @@ function quitaPers(k){if((AJ.hogar||[]).length<2)return;AJ.hogar.splice(k,1);ren
 
 async function guardarAj(){
   const m=metaAJ(),hs=(AJ.hogar||[]).map((pp,k)=>({id:pp.id||uid4(),n:(pp.n||'').trim()||('Persona '+(k+1)),
-    a:+pp.a||0,d:+pp.d||0})),
+    a:+pp.a||0,d:0})),
     nuevo={...CFG,hogar:hs,p1:hs[0]?hs[0].n:'Yo',p2:hs[1]?hs[1].n:'Pareja',
-      a1:hs[0]?hs[0].a:0,a2:hs[1]?hs[1].a:0,desc:hs.reduce((x,y)=>x+y.d,0)};
+      a1:hs[0]?hs[0].a:0,a2:hs[1]?hs[1].a:0,desc:0};
   if(vig==='siempre'){nuevo.meta=m;const viejas=metas.slice();metas=[];
     if(db){try{await Promise.all(viejas.map(x=>db.collection('metas').doc(x.id).delete()))}catch(e){}}}
   else{const id=uid4(),e2={id,v:m,desde:Q[qIdx()]};
