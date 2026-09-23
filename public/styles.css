@@ -21,7 +21,8 @@ body{margin:0;background:var(--bg);color:var(--ink);
 @media (max-width:540px){
   .stage{padding:0;gap:0;background:var(--bg)}
   .intro{display:none}
-  .phone{max-width:none;height:100dvh;min-height:0;max-height:100dvh;border:none;border-radius:0}
+  .phone{max-width:none;height:100dvh;min-height:0;max-height:100dvh;border:none;border-radius:0;
+    padding-top:env(safe-area-inset-top,0px)}
 }
 .scr{flex:1;overflow-y:auto;padding:0 18px 20px;display:flex;flex-direction:column;-webkit-overflow-scrolling:touch}
 .scr::-webkit-scrollbar{width:0}
@@ -43,6 +44,7 @@ body{margin:0;background:var(--bg);color:var(--ink);
   display:grid;place-items:center;cursor:pointer;padding:0}
 .hdr .hg:active{background:var(--surf3)}
 .top{display:flex;align-items:center;gap:12px;padding:12px 0;position:sticky;top:0;background:var(--bg);z-index:3}
+.hdr{padding-top:8px}
 .av{width:38px;height:38px;border-radius:50%;background:var(--brand);color:#fff;display:grid;place-items:center;
   font-family:"Inter Tight",sans-serif;font-weight:700;font-size:15px;flex:none}
 .top .who{flex:1;min-width:0}
