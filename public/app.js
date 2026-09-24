@@ -31,7 +31,7 @@ let modo='q', i=Math.max(Q.indexOf(qHoy()),0), view='home', det=null, db=null,
 
 const U=()=>modo==='q'?Q:MES;
 const qIdx=()=>modo==='q'?i:2*i+1;
-function metaQ(k){let v=CFG.meta||DEFMETA;
+function metaQ(k){let v=+CFG.meta||0;
   metas.slice().sort((a,b)=>Q.indexOf(a.desde)-Q.indexOf(b.desde))
     .forEach(m=>{const ix=Q.indexOf(m.desde);if(ix>=0&&ix<=k)v=m.v});
   return v}
@@ -163,7 +163,39 @@ function topSimple(t,s,back){return `<div class="top">
   <span class="who" style="text-align:center"><b>${t}</b><span>${s}</span></span>
   <span style="width:34px"></span></div>`}
 
+function catList(){
+  const list=CATS.map(c=>({c,v:catTot(i,c.id),p:prom(c.id)})).filter(x=>x.v>0).sort((a,b)=>b.v-a.v);
+  const mx=Math.max(...list.map(x=>Math.max(x.v,x.p)),1);
+  return {list,mx}}
+
+function vDescubrir(){
+  const t=tot(i),n=items(i).length,prev=qsConDatos(),sg=sugInicial();
+  const {list,mx}=catList();
+  return barra()+`
+  <div class="hero">
+    <div class="lb">Llevan registrado</div>
+    <div class="big">${fmt(t)}</div>
+    <div class="cmp">${n} ${n===1?'movimiento':'movimientos'} en ${modo==='q'?'esta quincena':'este mes'}</div>
+    <div class="mrow"><button class="lnk" data-go2="aj">ya sabemos cu\u00e1nto ponemos \u00b7 ponerlo ahora \u203a</button></div>
+  </div>
+  ${sg?`<div class="ins good"><h4>Ya los conocemos un poco</h4>
+    <p>En sus \u00faltimas quincenas gastaron ${listaY(prev.slice(-3).map(fmt))}.
+    Proponemos una meta de <span class="a">${fmt(sg)}</span> por quincena.</p>
+    <button class="btn sec2" data-meta0="${sg}">Me sirve, usar esta meta</button>
+    <button class="lnk" data-go2="aj" style="margin-top:10px">prefiero poner otra \u203a</button></div>`
+   :`<div class="ins"><h4>Estamos conociendo sus gastos</h4>
+    <p>Por ahora no hay meta ni sem\u00e1foro: registren lo que vayan gastando y ya. Cuando cierren su
+    segunda quincena con movimientos, les proponemos una meta con sus propios n\u00fameros.</p>
+    <p>Llevan <b>${prev.length}</b> ${prev.length===1?'quincena cerrada':'quincenas cerradas'} con gastos.</p></div>`}
+  ${list.length?`<div class="sec"><b>En qu\u00e9 se ha ido</b></div>
+  ${list.map(x=>`<button class="row" data-cat="${x.c.id}">
+    <span class="ic" style="background:${x.c.c}">${x.c.n[0]}</span>
+    <span class="tx"><b>${x.c.n}</b><span class="bar"><i style="width:${x.v/mx*100}%;background:${x.c.c}"></i></span></span>
+    <span class="amt">${fmtK(x.v)}</span></button>`).join('')}`:''}
+  <div class="spacer"></div>`}
+
 function vHome(){
+  if(!hayMeta())return vDescubrir();
   const t=tot(i),ap=APORTE(),
         pv=prov(i),disp=Math.max(ap-pv,0),tl=totLibre(i),tf=totFondo(i),
         over=tl>disp,esc2=Math.max(disp,tl)*1.06||1;
@@ -303,7 +335,7 @@ function vAn(){
   const gaps=CATS.map(c=>({c,v:costo(i,c.id),p:prom(c.id)})).filter(x=>x.p>0).map(x=>({...x,d:x.v-x.p})).sort((a,b)=>b.d-a.d);
   const peor=gaps[0],cub=cubiertos();
   return barra()+`
-  ${t>ap?`<div class="ins"><h4>${modo==='q'?'Esta quincena':'Este mes'} no alcanzó</h4>
+  ${!hayMeta()?'':t>ap?`<div class="ins"><h4>${modo==='q'?'Esta quincena':'Este mes'} no alcanzó</h4>
     <p>Gastaron <span class="a">${fmt(t)}</span> contra ${fmt(ap)} disponibles. Faltaron <b>${fmt(t-ap)}</b>.</p></div>`
    :`<div class="ins good"><h4>Van dentro de la meta</h4><p>Gastaron ${fmt(t)} y quedan <span class="a">${fmt(ap-t)}</span>.</p></div>`}
   ${peor&&peor.d>0?`<div class="ins"><h4>Lo que se salió de lo normal</h4>
@@ -316,6 +348,16 @@ function vAn(){
 
 
 /* ---------- meta y aportes ---------- */
+const hayMeta=()=>(+CFG.meta>0)||metas.length>0;
+function qsConDatos(){const T=todos(),v=[];
+  for(let k=0;k<qIdx();k++){const s=T.filter(g=>g.q===Q[k]).reduce((a,g)=>a+g.a,0);if(s>0)v.push(s)}
+  return v}
+function sugInicial(){const v=qsConDatos();if(v.length<2)return 0;
+  const u=v.slice(-6).sort((a,b)=>a-b),n=u.length;
+  const med=n%2?u[(n-1)/2]:(u[n/2-1]+u[n/2])/2;
+  return Math.round(med/50000)*50000}
+const listaY=a=>a.length<2?a.join(''):a.slice(0,-1).join(', ')+' y '+a[a.length-1];
+
 function sugerida(){const T=todos(),v=[];
   for(let k=0;k<qIdx();k++){const s=T.filter(g=>g.q===Q[k]).reduce((a,g)=>a+g.a,0);if(s>0)v.push(s)}
   if(v.length<3)return 0;
@@ -548,6 +590,10 @@ function render(){
     n.oninput=e=>{nota=e.target.value;pintaSug()};
     n.onblur=()=>{setTimeout(()=>{if(conceptos[clave(nota)])render()},180)};
     pintaSug()}}
+  scr.querySelectorAll('[data-meta0]').forEach(b=>b.onclick=async()=>{
+    b.disabled=true;CFG={...CFG,meta:+b.dataset.meta0};
+    if(db){try{await db.collection('config').doc('hogar').set(CFG)}catch(e){}}
+    render()});
   scr.querySelectorAll('[data-pend]').forEach(b=>b.onclick=()=>{
     const e=recMap()[b.dataset.pend];if(!e)return;
     amt=String(e.med);cat=e.cat;nota=e.n;cob=1;fon='';por='';
@@ -711,15 +757,13 @@ function vCodigo(email, msg){
 function vCrearHogar(){
   return gateHTML(`
    <h1>Arma tu hogar</h1>
-   <p class="gsub">Así sabemos de cuánta plata estamos hablando cada quincena.</p>
+   <p class="gsub">Dos datos y ya. De plata hablamos después, cuando la app los conozca.</p>
    <label class="glab">¿Cómo se llama tu hogar?</label>
    <input class="ginput" id="hNom" placeholder="Nuestro apartamento" autocomplete="off">
    <label class="glab">¿Cómo te llamas?</label>
    <input class="ginput" id="hYo" placeholder="Tu nombre" autocomplete="off">
-   <label class="glab">¿Cuánto pones por quincena?</label>
-   <input class="ginput gnum" id="hAp" inputmode="numeric" placeholder="0">
-   <p class="gfoot" style="margin-top:14px">Todo esto lo puedes cambiar después, y más adelante
-     invitas a quien viva contigo para que ponga su parte.</p>
+   <p class="gfoot" style="margin-top:14px">No les vamos a pedir una meta todavía. Registren sus gastos
+     unas semanas y la app se las propone con sus propios números.</p>
    <button class="gbtn gp" id="bCrear">Crear mi hogar</button>
    <button class="glink" id="bSalir">Salir de esta cuenta</button>`)}
 
@@ -826,14 +870,13 @@ function mostrarCodigo(msg){
 
 function mostrarCrear(){
   pinta(vCrearHogar());
-  soloNum(document.getElementById('hAp'));
   document.getElementById('bSalir').onclick = salir;
   document.getElementById('bCrear').onclick = async (ev) => {
     ev.target.disabled = true;
     const { data, error } = await sb.rpc('crear_hogar', {
       p_nombre: document.getElementById('hNom').value.trim(),
       p_mi_nombre: document.getElementById('hYo').value.trim(),
-      p_aporte: leeNum('hAp'), p_descuento: 0 });
+      p_aporte: 0, p_descuento: 0 });
     if (error) { ev.target.disabled = false; alert(error.message); return }
     hogarId = data; await cargar(); entraApp(); suscribir(); render();
   };
