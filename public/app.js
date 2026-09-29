@@ -27,7 +27,7 @@ function qHoy(){const d=new Date();return MES[d.getMonth()]+' '+(d.getDate()<=15
 let modo='q', i=Math.max(Q.indexOf(qHoy()),0), view='home', det=null, db=null,
     nuevos=[], overrides={}, editKey=null, lastKey='', amt='', cat=null, por='', nota='',
     AJ=null, vig='siempre', cob=1, fon='', fondOv={}, NF=null, NM=null, conceptos={},
-    catOpen=false, detOpen=false, ultimo=null;
+    catOpen=false, detOpen=false, ultimo=null, cierres={};
 
 const U=()=>modo==='q'?Q:MES;
 const qIdx=()=>modo==='q'?i:2*i+1;
@@ -43,7 +43,7 @@ function todos(){const out=[];
       a:ov.a!==undefined?ov.a:g.a*1000,por:ov.por||0,cob:ov.cob!==undefined?ov.cob:(g.cob||1),
       fon:ov.fon!==undefined?ov.fon:(g.fon||''),
       seed:1,edit:!!ov.cat||ov.n!==undefined||ov.a!==undefined})});
-  nuevos.forEach(g=>out.push({k:g.id,q:g.q,cat:g.cat,n:g.n,a:g.a,por:g.por||0,cob:g.cob||1,fon:g.fon||'',id:g.id}));
+  nuevos.forEach(g=>out.push({k:g.id,q:g.q,cat:g.cat,n:g.n,a:g.a,por:g.por||0,cob:g.cob||1,fon:g.fon||'',id:g.id,cpor:g.cpor||''}));
   return out}
 const qi=g=>Q.indexOf(g.q);
 const per=g=>(g.cob&&g.cob>1)?g.cob*2:1;
@@ -329,12 +329,76 @@ function vEdit(){const g=todos().find(x=>x.k===editKey);
   if(!g)return topSimple('Corregir','','mov')+'<p class="hint">Ese gasto ya no existe.</p><div class="spacer"></div>';
   return topSimple('Corregir gasto','registrado por ustedes','mov')+formulario(true)}
 
+// --- cierre del periodo -------------------------------------------
+// Quien pago: lo que diga el gasto; si no dice nada, quien lo registro.
+function quienPago(g){
+  const hs=H();
+  if(g.por && hs.some(p=>p.id===g.por)) return g.por;
+  if(g.cpor){const m=hs.find(p=>p.u===g.cpor); if(m) return m.id}
+  return hs[0]?hs[0].id:'';
+}
+const claveCierre=()=>modo+'|'+(modo==='q'?Q[i]:MES[i]);
+function cuentas(){
+  const hs=H(), gs=items(i).filter(g=>!g.fon);
+  const total=gs.reduce((a,g)=>a+g.a,0);
+  const puso={}; hs.forEach(p=>puso[p.id]=0);
+  gs.forEach(g=>{const k=quienPago(g); if(puso[k]!==undefined)puso[k]+=g.a});
+  let sw=hs.reduce((a,p)=>a+(+p.a||0),0);
+  const w=p=>sw>0?(+p.a||0)/sw:1/hs.length;
+  const gente=hs.map(p=>({id:p.id,n:p.n,puso:puso[p.id]||0,toca:total*w(p)}))
+                .map(x=>({...x,saldo:x.puso-x.toca}));
+  // quien le paga a quien, con el minimo de transferencias
+  const deb=gente.filter(x=>x.saldo<-500).map(x=>({...x,v:-x.saldo})).sort((a,b)=>b.v-a.v);
+  const acr=gente.filter(x=>x.saldo>500).map(x=>({...x,v:x.saldo})).sort((a,b)=>b.v-a.v);
+  const pagos=[]; let a=0,b=0;
+  while(a<deb.length&&b<acr.length){
+    const v=Math.min(deb[a].v,acr[b].v);
+    if(v>500)pagos.push({de:deb[a].n,a:acr[b].n,v:Math.round(v/100)*100});
+    deb[a].v-=v; acr[b].v-=v;
+    if(deb[a].v<=500)a++; if(acr[b].v<=500)b++;
+  }
+  return {total,gente,pagos,prop:sw>0};
+}
+
+function vCierre(){
+  const {total,gente,pagos,prop}=cuentas(), hs=H(),
+        cerr=cierres[claveCierre()], et=modo==='q'?'quincena':'mes',
+        nom=modo==='q'?Q[i].toLowerCase():MES[i].toLowerCase();
+  if(hs.length<2) return topSimple('Cerrar cuentas','',
+    'an')+`<p class="hint">El cierre sirve cuando viven dos o m\u00e1s personas. Agrega a quien viva contigo
+    en Ajustes \u2192 El hogar y vuelve ac\u00e1.</p><div class="spacer"></div>`;
+  return topSimple('Cerrar cuentas',nom,'an')+`
+  ${cerr?`<div class="ins good"><h4>Ya quedaron a paz y salvo</h4>
+    <p>Cerraron ${et==='quincena'?'esta quincena':'este mes'} el ${new Date(cerr.en).toLocaleDateString('es-CO',{day:'numeric',month:'long'})}.</p>
+    <button class="btn sec2" data-reabrir="1">Reabrir el cierre</button></div>`:''}
+  <div class="hero"><div class="lb">Gastaron entre ${hs.length}</div>
+    <div class="big">${fmt(total)}</div>
+    <div class="cmp">${prop?'repartido seg\u00fan lo que pone cada uno':'repartido en partes iguales'}</div></div>
+  ${gente.map((x,k)=>`<div class="row" style="cursor:default">
+    <span class="ic" style="background:${COLP[k%COLP.length]}">${esc((x.n||'?').charAt(0).toUpperCase())}</span>
+    <span class="tx"><b>${esc(x.n)}</b><span>puso ${fmt(x.puso)} \u00b7 le tocaba ${fmt(x.toca)}</span></span>
+    <span class="amt" style="color:${x.saldo>500?'var(--good)':x.saldo<-500?'var(--brand)':'var(--faint)'}">${
+      x.saldo>500?'+'+fmtK(x.saldo):x.saldo<-500?'\u2212'+fmtK(-x.saldo):'al d\u00eda'}</span></div>`).join('')}
+  ${pagos.length?`<div class="sec"><b>Para quedar en ceros</b></div>
+    ${pagos.map(p=>`<div class="ins"><h4>${esc(p.de)} le debe ${fmt(p.v)} a ${esc(p.a)}</h4></div>`).join('')}
+    ${cerr?'':'<button class="btn" data-cerrar="1">Marcar como saldado</button>'}`
+   :`<div class="ins good"><h4>No se deben nada</h4>
+     <p>Cada uno puso lo que le tocaba. No hay que transferir nada.</p></div>`}
+  <p class="hint">Se toma como pagador a quien registr\u00f3 cada gasto. Si alguno lo pag\u00f3 el otro,
+   c\u00e1mbialo en Movimientos antes de cerrar. Lo que sale de un fondo no entra en el reparto.</p>
+  <div class="spacer"></div>`}
+
 function vAn(){
   const t=tot(i),ap=Math.max(APORTE()-prov(i),0);
+  const cerrado=!!cierres[claveCierre()];
   if(!t)return barra()+'<p class="hint">Registra algunos gastos y aquí aparece la lectura del periodo.</p><div class="spacer"></div>';
   const gaps=CATS.map(c=>({c,v:costo(i,c.id),p:prom(c.id)})).filter(x=>x.p>0).map(x=>({...x,d:x.v-x.p})).sort((a,b)=>b.d-a.d);
   const peor=gaps[0],cub=cubiertos();
   return barra()+`
+  ${H().length>1?`<button class="row" data-go2="cierre">
+    <span class="ic" style="background:var(--surf3);color:var(--mute);font-size:16px">\u21c4</span>
+    <span class="tx"><b>Cerrar cuentas</b><span>${cerrado?'ya quedaron a paz y salvo':'cu\u00e1nto le debe uno al otro'}</span></span>
+    <span class="amt" style="font-size:13px;color:var(--brand);font-weight:500">${cerrado?'Ver':'Abrir'}</span></button>`:''}
   ${!hayMeta()?'':t>ap?`<div class="ins"><h4>${modo==='q'?'Esta quincena':'Este mes'} no alcanzó</h4>
     <p>Gastaron <span class="a">${fmt(t)}</span> contra ${fmt(ap)} disponibles. Faltaron <b>${fmt(t-ap)}</b>.</p></div>`
    :`<div class="ins good"><h4>Van dentro de la meta</h4><p>Gastaron ${fmt(t)} y quedan <span class="a">${fmt(ap-t)}</span>.</p></div>`}
@@ -584,12 +648,22 @@ function render(){
   [...tabs.children].forEach(b=>b.classList.toggle('on',b.dataset.go===view));
   const y=scr.scrollTop;
   if(view==='aj'&&!AJ)AJ={...CFG,hogar:H().map(x=>({...x}))};
-  scr.innerHTML=(view==='cfg'?vConfig():view==='apr'?vAprend():view==='fon'?vFondos():view==='aj'?vAjustes():view==='edit'?vEdit():det?vDet():view==='home'?vHome():view==='reg'?vReg():view==='mov'?vMov():vAn())
+  scr.innerHTML=(view==='cierre'?vCierre():view==='cfg'?vConfig():view==='apr'?vAprend():view==='fon'?vFondos():view==='aj'?vAjustes():view==='edit'?vEdit():det?vDet():view==='home'?vHome():view==='reg'?vReg():view==='mov'?vMov():vAn())
     +`<div class="sync ${db?'':'warn'}">${db?'Guardado en tu cuenta':'Sin conexión — no se está guardando'}</div>`;
   if(view==='reg'||view==='edit'){const n=document.getElementById('nota');if(n){
     n.oninput=e=>{nota=e.target.value;pintaSug()};
     n.onblur=()=>{setTimeout(()=>{if(conceptos[clave(nota)])render()},180)};
     pintaSug()}}
+  scr.querySelectorAll('[data-cerrar]').forEach(b=>b.onclick=async()=>{
+    b.disabled=true;const c=cuentas(),per=modo==='q'?Q[i]:MES[i];
+    try{await sb.from('closings').upsert({household_id:hogarId,periodo:per,modo,
+      total:Math.round(c.total),detalle:c.pagos,cerrado_por:sesion.user.id},
+      {onConflict:'household_id,periodo,modo'})}catch(e){alert('No se pudo guardar el cierre.')}
+    await cargar();render()});
+  scr.querySelectorAll('[data-reabrir]').forEach(b=>b.onclick=async()=>{
+    const c=cierres[claveCierre()];if(!c)return;b.disabled=true;
+    try{await sb.from('closings').delete().eq('id',c.id)}catch(e){}
+    await cargar();render()});
   scr.querySelectorAll('[data-meta0]').forEach(b=>b.onclick=async()=>{
     b.disabled=true;CFG={...CFG,meta:+b.dataset.meta0};
     if(db){try{await db.collection('config').doc('hogar').set(CFG)}catch(e){}}
@@ -886,22 +960,25 @@ async function salir(){ await sb.auth.signOut(); hogarId=null; location.reload()
 
 /* ---------- carga ---------- */
 async function cargar(){
-  const [h, ms, ex, fu, co, mc] = await Promise.all([
+  const [h, ms, ex, fu, co, mc, cl] = await Promise.all([
     sb.from('households').select('*').eq('id', hogarId).single(),
     sb.from('members').select('*').eq('household_id', hogarId).order('creado_en'),
     sb.from('expenses').select('*').eq('household_id', hogarId),
     sb.from('funds').select('*').eq('household_id', hogarId).order('creado_en'),
     sb.from('concepts').select('*').eq('household_id', hogarId),
     sb.from('meta_changes').select('*').eq('household_id', hogarId),
+    sb.from('closings').select('*').eq('household_id', hogarId),
   ]);
   hogarRow = h.data || {};
   const miembros = ms.data || [];
 
   CFG = { ...CFG, nombre: hogarRow.nombre || 'Mi hogar', meta: +hogarRow.meta_base || 0,
-          hogar: miembros.map(m => ({ id:m.id, n:m.nombre, a:+m.aporte||0, d:+m.descuento||0 })) };
+          hogar: miembros.map(m => ({ id:m.id, n:m.nombre, a:+m.aporte||0, d:+m.descuento||0,
+                                      u:m.user_id||'' })) };
 
   nuevos = (ex.data||[]).map(r => ({ id:r.id, q:r.q, cat:r.cat, n:r.nombre, a:+r.monto,
-            cob:+r.cobertura||1, fon:r.fund_id||'', por:r.pagado_por||'' }));
+            cob:+r.cobertura||1, fon:r.fund_id||'', por:r.pagado_por||'',
+            cpor:r.creado_por||'' }));
   overrides = {};
 
   fondOv = {}; (fu.data||[]).forEach(r => { fondOv[r.id] =
@@ -912,6 +989,9 @@ async function cargar(){
     { k:r.clave, n:r.nombre, cob:+r.cobertura||1, fon:r.fund_id||'' } });
 
   metas = (mc.data||[]).map(r => ({ id:r.id, v:+r.valor, desde:r.desde_q }));
+
+  cierres = {}; (cl.data||[]).forEach(r => { cierres[r.modo+'|'+r.periodo] =
+    { id:r.id, periodo:r.periodo, modo:r.modo, total:+r.total, det:r.detalle||[], en:r.cerrado_en } });
 
   db = shim;   // a partir de aquí la app considera que hay conexión
 }
