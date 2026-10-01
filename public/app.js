@@ -352,7 +352,7 @@ function entregado(){const c=cierres[claveCierre()];return (c&&c.ap)||{}}
 // Lo pactado es un presupuesto y una proporcion, no una plata que alguien recoge.
 // Al cerrar se reparte LO QUE DE VERDAD SE GASTO segun esa proporcion.
 function cuentas(){
-  const hs=H(), gs=items(i).filter(g=>!g.fon), ent=entregado();
+  const hs=H(), gs=items(i).filter(g=>!g.fon);
   const total=gs.reduce((a,g)=>a+g.a,0);
   const pago={}; hs.forEach(p=>pago[p.id]=0);
   gs.forEach(g=>{const k=quienPago(g); if(pago[k]!==undefined)pago[k]+=g.a});
@@ -360,8 +360,8 @@ function cuentas(){
   const pactTot=hs.reduce((a,p)=>a+perQ(p),0);
   const gente=hs.map(p=>{
     const pct=pactTot>0?perQ(p)/pactTot:1/hs.length;
-    const pg=pago[p.id]||0, dio=+ent[p.id]||0, puso=pg+dio, toca=total*pct;
-    return {id:p.id,n:p.n,pct,pact:perQ(p),pago:pg,dio,puso,toca,saldo:puso-toca}});
+    const pg=pago[p.id]||0, toca=total*pct;
+    return {id:p.id,n:p.n,pct,pact:perQ(p),pago:pg,toca,saldo:pg-toca}});
   const deb=gente.filter(x=>x.saldo<-500).map(x=>({...x,v:-x.saldo})).sort((a,b)=>b.v-a.v);
   const acr=gente.filter(x=>x.saldo>500).map(x=>({...x,v:x.saldo})).sort((a,b)=>b.v-a.v);
   const pagos=[]; let m=0,n=0;
@@ -408,9 +408,6 @@ function vCierre(){
       <b style="color:var(--ink);font-size:15px">${fmt(x.toca)}</b></div>
     <div class="pl"><span>Pag\u00f3 gastos del hogar</span>
       <b style="color:var(--mute);font-size:15px">${fmt(x.pago)}</b></div>
-    <div class="pl"><span>Ya le transfiri\u00f3 al otro<em>aparte de los gastos que pag\u00f3</em></span>
-      <input data-ent="${x.id}" inputmode="numeric" value="${miles(x.dio)}" placeholder="0"
-        ${firme?'disabled':''}></div>
   </div>`).join('')}
 
   <div class="sec"><b>El cierre</b></div>
@@ -725,11 +722,6 @@ function render(){
     n.oninput=e=>{nota=e.target.value;pintaSug()};
     n.onblur=()=>{setTimeout(()=>{if(conceptos[clave(nota)])render()},180)};
     pintaSug()}}
-  scr.querySelectorAll('[data-ent]').forEach(el=>{
-    el.oninput=e=>{const d=e.target.value.replace(/\D/g,'');e.target.value=miles(d)};
-    el.onblur=async e=>{const d=+(e.target.value.replace(/\D/g,''))||0;
-      const ap={...entregado()};ap[el.dataset.ent]=d;
-      await guardaCierre({aportes:ap});render()}});
   scr.querySelectorAll('[data-upd]').forEach(b=>b.onclick=async()=>{
     const t=document.getElementById('vst'); if(!t)return;
     b.disabled=true; t.textContent='Buscando\u2026';
