@@ -670,6 +670,10 @@ function vConfig(){const k=qIdx(),hs=H(),
    <span class="ci"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#e0536b" stroke-width="1.9" stroke-linecap="round"><path d="M14 4.5H6.5A1.5 1.5 0 0 0 5 6v12a1.5 1.5 0 0 0 1.5 1.5H14"/><path d="M17 8.5 20.5 12 17 15.5M20 12H10"/></svg></span>
    <span class="ct"><b>Cerrar sesión</b><span>${(sesion&&sesion.user&&sesion.user.email)||''}</span></span>
    <i>\u203a</i></button>
+ <button class="cfgr" data-upd="1">
+   <span class="ci"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round"><path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20 4v4.5h-4.5"/></svg></span>
+   <span class="ct"><b>Buscar actualizaci\u00f3n</b><span id="vst">versi\u00f3n ${verBonita(MIVER)}</span></span>
+   <i>\u203a</i></button>
  <p class="hint">El hogar puede cambiar: alguien entra, alguien sale, o cambia lo que pone cada uno.
  Nada de esto queda fijo desde el principio \u2014 se ajusta aqu\u00ed cuando pase.</p>
  <div class="spacer"></div>`}
@@ -701,6 +705,15 @@ function render(){
     el.onblur=async e=>{const d=+(e.target.value.replace(/\D/g,''))||0;
       const ap={...entregado()};ap[el.dataset.ent]=d;
       await guardaCierre({aportes:ap});render()}});
+  scr.querySelectorAll('[data-upd]').forEach(b=>b.onclick=async()=>{
+    const t=document.getElementById('vst'); if(!t)return;
+    b.disabled=true; t.textContent='Buscando\u2026';
+    const r=await revisaVersion(true);
+    if(r==='nueva'){t.textContent='Actualizando\u2026';return}
+    t.textContent = r==='sinred'
+      ? 'sin conexi\u00f3n \u2014 int\u00e9ntalo en un momento'
+      : 'ya tienes la \u00faltima \u00b7 versi\u00f3n '+verBonita(MIVER);
+    b.disabled=false});
   scr.querySelectorAll('[data-cerrar]').forEach(b=>b.onclick=async()=>{
     b.disabled=true;const c=cuentas();
     await guardaCierre({total:Math.round(c.total),detalle:c.pagos,saldado:true,
@@ -1125,17 +1138,33 @@ tabs.onclick = e => {
 // si cambio, limpia el cache y recarga.
 const MIVER = (document.querySelector('meta[name=tuqui-version]')||{}).content || '';
 let _chk = 0;
-async function revisaVersion(){
-  const ahora = Date.now(); if (ahora - _chk < 60000) return; _chk = ahora;
+async function limpiaYRecarga(){
+  try{ if (self.caches){ const ks = await caches.keys();
+    await Promise.all(ks.map(k=>caches.delete(k))) } }catch(e){}
+  try{ if (navigator.serviceWorker){
+    const rs = await navigator.serviceWorker.getRegistrations();
+    await Promise.all(rs.map(r=>r.unregister())) } }catch(e){}
+  location.replace(location.pathname + '?v=' + Date.now());
+}
+// Devuelve 'nueva' | 'aldia' | 'sinred'
+async function revisaVersion(forzado){
+  const ahora = Date.now();
+  if (!forzado && ahora - _chk < 60000) return 'aldia';
+  _chk = ahora;
   try{
     const r = await fetch('index.html?v=' + ahora, { cache:'no-store' });
     const t = await r.text();
     const m = t.match(/tuqui-version"\s+content="([^"]+)"/);
-    if (m && MIVER && m[1] !== MIVER){
-      if (self.caches) { const ks = await caches.keys(); await Promise.all(ks.map(k=>caches.delete(k))) }
-      location.reload();
-    }
-  }catch(e){}
+    if (m && MIVER && m[1] !== MIVER){ await limpiaYRecarga(); return 'nueva' }
+    return 'aldia';
+  }catch(e){ return 'sinred' }
+}
+function verBonita(v){
+  const m = String(v||'').match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return v || 'desconocida';
+  const MS=['enero','febrero','marzo','abril','mayo','junio','julio',
+            'agosto','septiembre','octubre','noviembre','diciembre'];
+  return 'del ' + (+m[3]) + ' de ' + MS[+m[2]-1];
 }
 document.addEventListener('visibilitychange', () => { if (!document.hidden) revisaVersion() });
 window.addEventListener('focus', revisaVersion);
