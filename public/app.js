@@ -230,7 +230,7 @@ function vHome(){
     <p class="hint">Son cosas que ya vienen repitiéndose. Si alguna no aplica este periodo, ignórala — desaparece sola.</p>`})()}
   ${(()=>{if(H().length<2)return '';
     const cz=cierres[claveCierre()],hecho=!!(cz&&cz.saldado),cc=cuentas();
-    if(cc.sinAporte)return '';
+    if(cc.sinPacto)return '';
     const p=cc.pagos[0];
     return `<button class="row" data-go2="cierre">
     <span class="ic" style="background:var(--surf3);color:var(--mute);font-size:16px">\u21c4</span>
@@ -348,78 +348,80 @@ function quienPago(g){
 }
 const claveCierre=()=>modo+'|'+(modo==='q'?Q[i]:MES[i]);
 function entregado(){const c=cierres[claveCierre()];return (c&&c.ap)||{}}
-function quienGuarda(){const hs=H(),e=entregado();
-  if(e._guarda&&hs.some(p=>p.id===e._guarda))return e._guarda;
-  return hs[0]?hs[0].id:''}
 
-// El aporte es un compromiso: cada quien le debe al hogar su parte completa,
-// la ponga transfiriendola o pagando gastos de su bolsillo. Lo que no se gasta
-// no desaparece: queda guardado para lo que viene.
+// Lo pactado es un presupuesto y una proporcion, no una plata que alguien recoge.
+// Al cerrar se reparte LO QUE DE VERDAD SE GASTO segun esa proporcion.
 function cuentas(){
-  const hs=H(), gs=items(i).filter(g=>!g.fon), ent=entregado(), gid=quienGuarda();
+  const hs=H(), gs=items(i).filter(g=>!g.fon), ent=entregado();
   const total=gs.reduce((a,g)=>a+g.a,0);
   const pago={}; hs.forEach(p=>pago[p.id]=0);
   gs.forEach(g=>{const k=quienPago(g); if(pago[k]!==undefined)pago[k]+=g.a});
   const perQ=p=>modo==='q'?(+p.a||0):(+p.a||0)*2;
+  const pactTot=hs.reduce((a,p)=>a+perQ(p),0);
   const gente=hs.map(p=>{
-    const compro=perQ(p), pg=pago[p.id]||0, dio=+ent[p.id]||0, puso=pg+dio;
-    return {id:p.id,n:p.n,compro,pago:pg,dio,puso,falta:compro-puso,
-            guarda:p.id===gid}});
-  const compTot=gente.reduce((a,x)=>a+x.compro,0), sobra=compTot-total;
-  const quien=gente.find(x=>x.guarda)||gente[0];
-  const pagos=gente.filter(x=>!x.guarda&&Math.abs(x.falta)>500).map(x=>
-    x.falta>0?{de:x.n,a:quien.n,v:Math.round(x.falta/100)*100}
-             :{de:quien.n,a:x.n,v:Math.round(-x.falta/100)*100});
-  return {total,gente,pagos,compTot,sobra,quien,sinAporte:compTot<=0};
+    const pct=pactTot>0?perQ(p)/pactTot:1/hs.length;
+    const pg=pago[p.id]||0, dio=+ent[p.id]||0, puso=pg+dio, toca=total*pct;
+    return {id:p.id,n:p.n,pct,pact:perQ(p),pago:pg,dio,puso,toca,saldo:puso-toca}});
+  const deb=gente.filter(x=>x.saldo<-500).map(x=>({...x,v:-x.saldo})).sort((a,b)=>b.v-a.v);
+  const acr=gente.filter(x=>x.saldo>500).map(x=>({...x,v:x.saldo})).sort((a,b)=>b.v-a.v);
+  const pagos=[]; let m=0,n=0;
+  while(m<deb.length&&n<acr.length){
+    const v=Math.min(deb[m].v,acr[n].v);
+    if(v>500)pagos.push({de:deb[m].n,a:acr[n].n,v:Math.round(v/100)*100});
+    deb[m].v-=v; acr[n].v-=v;
+    if(deb[m].v<=500)m++; if(acr[n].v<=500)n++;
+  }
+  return {total,gente,pagos,pactTot,sobra:pactTot-total,sinPacto:pactTot<=0};
 }
 
 function vCierre(){
-  const c=cuentas(), {total,gente,pagos,compTot,sobra,quien,sinAporte}=c, hs=H(),
+  const c=cuentas(), {total,gente,pagos,pactTot,sobra,sinPacto}=c, hs=H(),
         cerr=cierres[claveCierre()], firme=cerr&&cerr.saldado,
         et=modo==='q'?'quincena':'mes',
         nom=modo==='q'?Q[i].toLowerCase():MES[i].toLowerCase();
   if(hs.length<2) return topSimple('Cerrar cuentas','','home')+`
     <p class="hint">El cierre sirve cuando viven dos o m\u00e1s personas. Agrega a quien viva contigo
     en Ajustes \u2192 El hogar y vuelve ac\u00e1.</p><div class="spacer"></div>`;
-  if(sinAporte) return topSimple('Cerrar cuentas',nom,'home')+`
-    <p class="hint">Primero pongan cu\u00e1nto va a poner cada uno por ${et}, en
-    Ajustes \u2192 El hogar. Sin eso no hay nada que cruzar.</p>
+  if(sinPacto) return topSimple('Cerrar cuentas',nom,'home')+`
+    <p class="hint">Primero pacten c\u00f3mo se reparten los gastos, en Ajustes \u2192 El hogar.
+    Sin eso no hay con qu\u00e9 cruzar.</p>
     <button class="btn sec2" data-go2="aj">Ir a El hogar</button><div class="spacer"></div>`;
+  const pc=x=>Math.round(x.pct*100);
   return topSimple('Cerrar cuentas',nom,'home')+`
   ${firme?`<div class="ins good"><h4>Ya quedaron a paz y salvo</h4>
     <p>Cerraron el ${new Date(cerr.en).toLocaleDateString('es-CO',{day:'numeric',month:'long'})}.</p>
     <button class="btn sec2" data-reabrir="1">Reabrir el cierre</button></div>`:''}
 
-  <div class="sec"><b>\u00bfQui\u00e9n guarda la plata del hogar?</b></div>
-  <div class="pills">${hs.map(p=>`<button class="pill ${p.id===quien.id?'sel':''}"
-    data-guarda="${p.id}" ${firme?'disabled':''}>${esc(p.n)}</button>`).join('')}</div>
-  <p class="hint">A esa persona le transfieren los dem\u00e1s lo que les falte.</p>
+  <div class="hero"><div class="lb">Se gast\u00f3 en ${et==='quincena'?'la quincena':'el mes'}</div>
+    <div class="big">${fmt(total)}</div>
+    <div class="cmp">repartido ${gente.map(x=>pc(x)+'%').join(' / ')} como lo pactaron</div></div>
 
-  <div class="sec"><b>Lo que puso cada uno</b><span>de ${fmt(compTot)} comprometidos</span></div>
+  <div class="sec"><b>Lo que puso cada uno</b></div>
   ${gente.map((x,k)=>`<div class="pers">
     <div class="ph">
       <span class="av2" style="background:${COLP[k%COLP.length]}">${esc((x.n||'?').charAt(0).toUpperCase())}</span>
-      <b style="flex:1;font-size:15px">${esc(x.n)}${x.guarda?' <span class="tag ed">guarda</span>':''}</b>
-      <span style="font-size:13px;color:${x.falta>500?'var(--brand)':x.falta<-500?'var(--good)':'var(--faint)'}">${
-        x.falta>500?'faltan '+fmt(x.falta):x.falta<-500?'puso '+fmt(-x.falta)+' de m\u00e1s':'al d\u00eda'}</span>
+      <b style="flex:1;font-size:15px">${esc(x.n)} <span class="tag ed">${pc(x)}%</span></b>
+      <span style="font-size:13px;color:${x.saldo>500?'var(--good)':x.saldo<-500?'var(--brand)':'var(--faint)'}">${
+        x.saldo>500?'puso '+fmt(x.saldo)+' de m\u00e1s':x.saldo<-500?'le faltan '+fmt(-x.saldo):'al d\u00eda'}</span>
     </div>
-    <div class="pl"><span>Le corresponde poner</span>
-      <b style="color:var(--ink);font-size:15px">${fmt(x.compro)}</b></div>
+    <div class="pl"><span>Le tocaba<em>${pc(x)}% de ${fmt(total)}</em></span>
+      <b style="color:var(--ink);font-size:15px">${fmt(x.toca)}</b></div>
     <div class="pl"><span>Pag\u00f3 gastos del hogar</span>
       <b style="color:var(--mute);font-size:15px">${fmt(x.pago)}</b></div>
-    <div class="pl"><span>Ya transfiri\u00f3<em>aparte de los gastos que pag\u00f3</em></span>
+    <div class="pl"><span>Ya le transfiri\u00f3 al otro<em>aparte de los gastos que pag\u00f3</em></span>
       <input data-ent="${x.id}" inputmode="numeric" value="${miles(x.dio)}" placeholder="0"
         ${firme?'disabled':''}></div>
   </div>`).join('')}
 
   <div class="sec"><b>El cierre</b></div>
-  ${pagos.length?pagos.map(p=>`<div class="ins"><h4>${esc(p.de)} le transfiere ${fmt(p.v)} a ${esc(p.a)}</h4></div>`).join('')
+  ${pagos.length?pagos.map(p=>`<div class="ins"><h4>${esc(p.de)} le transfiere ${fmt(p.v)} a ${esc(p.a)}</h4>
+     <p>Con eso cada uno queda habiendo puesto su parte.</p></div>`).join('')
    :`<div class="ins good"><h4>No se deben nada</h4><p>Cada uno ya puso lo que le correspond\u00eda.</p></div>`}
 
-  <div class="ins ${sobra<0?'':'good'}"><h4>${sobra>=0?'Queda guardado '+fmt(sobra):'Se pasaron por '+fmt(-sobra)}</h4>
+  <div class="ins ${sobra<0?'':'good'}"><h4>${sobra>=0?'Sobraron '+fmt(sobra)+' de lo pactado':'Se pasaron '+fmt(-sobra)+' de lo pactado'}</h4>
     <p>${sobra>=0
-      ?`De ${fmt(compTot)} gastaron ${fmt(total)}. Lo que sobra queda para lo que viene.`
-      :`Gastaron ${fmt(total)} contra ${fmt(compTot)} comprometidos. Ese exceso sali\u00f3 de otro lado.`}</p></div>
+      ?`Hab\u00edan pactado ${fmt(pactTot)} y gastaron ${fmt(total)}. Esa plata no hizo falta ponerla.`
+      :`Hab\u00edan pactado ${fmt(pactTot)} y gastaron ${fmt(total)}. Si se repite, toca subir la cuota o recortar.`}</p></div>
 
   ${firme?'':'<button class="btn" data-cerrar="1">Marcar como saldado</button>'}
   <p class="hint">Se toma como pagador a quien registr\u00f3 cada gasto; si lo pag\u00f3 el otro, c\u00e1mbialo en
@@ -466,34 +468,70 @@ const sumaDesc=()=>(AJ.hogar||[]).reduce((s,p)=>s+(+p.d||0),0);
 const metaAJ=()=>sumaAp();
 const miles=v=>v?(+v).toLocaleString('es-CO'):'';
 
+// El reparto se pacta en porcentajes: es mas facil decir "mitad y mitad"
+// que teclear dos montos. Por dentro se guarda como monto por persona.
+function repInit(){
+  const hs=AJ.hogar||[];
+  if(AJ.tot===undefined) AJ.tot=hs.reduce((a,p)=>a+(+p.a||0),0);
+  if(!AJ.pcs){AJ.pcs={};
+    const t=hs.reduce((a,p)=>a+(+p.a||0),0);
+    hs.forEach(p=>AJ.pcs[p.id]= t>0?Math.round((+p.a||0)/t*100):Math.round(100/hs.length));
+    AJ.igual = hs.every(p=>Math.abs(AJ.pcs[p.id]-100/hs.length)<1);
+  }
+  hs.forEach(p=>{if(AJ.pcs[p.id]===undefined)AJ.pcs[p.id]=0});
+}
+function repAplica(){
+  const hs=AJ.hogar||[], n=hs.length;
+  if(AJ.igual) hs.forEach((p,k)=>AJ.pcs[p.id]= k===0?100-Math.round(100/n)*(n-1):Math.round(100/n));
+  let resto=+AJ.tot||0;
+  hs.forEach((p,k)=>{
+    if(k===n-1){p.a=Math.max(resto,0)}
+    else{const v=Math.round((+AJ.tot||0)*(AJ.pcs[p.id]||0)/100/1000)*1000;p.a=v;resto-=v}});
+}
+const sumaPcs=()=>(AJ.hogar||[]).reduce((a,p)=>a+(+AJ.pcs[p.id]||0),0);
+
 function vAjustes(){
+  repInit(); repAplica();
   const m=metaAJ(),sug=sugerida(),q=Q[qIdx()].toLowerCase(),
         hs=AJ.hogar||[],
         ms=metas.slice().sort((x,y)=>Q.indexOf(x.desde)-Q.indexOf(y.desde)),
-        dif=sug&&m?Math.abs(sug-m)/m:0;
-  return topSimple('El hogar','qui\u00e9nes viven aqu\u00ed y cu\u00e1nto ponen','cfg')+`
+        dif=sug&&m?Math.abs(sug-m)/m:0, sp=sumaPcs();
+  return topSimple('El hogar','qui\u00e9nes viven aqu\u00ed y c\u00f3mo se reparten','cfg')+`
   <div class="sec"><b>\u00bfQui\u00e9nes viven aqu\u00ed?</b><span>${hs.length===1?'1 persona':hs.length+' personas'}</span></div>
-  ${hs.map((pp,k)=>`<div class="pers">
-    <div class="ph">
+  ${hs.map((pp,k)=>`<div class="ph" style="margin-bottom:8px">
       <span class="av2" style="background:${COLP[k%COLP.length]}">${esc((pp.n||'?').trim().charAt(0).toUpperCase()||'?')}</span>
       <input data-ph="${k}" value="${esc(pp.n||'')}" placeholder="Nombre" autocomplete="off">
       ${hs.length>1?`<button class="x" data-rmp="${k}">Quitar</button>`:''}
-    </div>
-    <div class="pl"><span>Aporta por quincena</span>
-      <input data-pa="${k}" inputmode="numeric" value="${miles(pp.a)}" placeholder="0"></div>
-  </div>`).join('')}
+    </div>`).join('')}
   <button class="addp" data-addp="1">+ Agregar otra persona</button>
+
+  <div class="sec"><b>\u00bfCu\u00e1nto esperan gastar por quincena?</b></div>
+  <div class="amtw"><span class="cur">$</span>
+    <input class="amtin" id="htot" inputmode="numeric" placeholder="0"
+      value="${AJ.tot?(+AJ.tot).toLocaleString('es-CO'):''}"></div>
+  ${sug&&dif>0.08?`<p class="hint">En sus \u00faltimas quincenas gastaron <b>${fmt(sug)}</b>.
+    <button class="lnk" data-usar="${sug}" style="display:inline">usar esa cifra \u203a</button></p>`:''}
+
+  ${hs.length>1?`
+  <div class="sec"><b>\u00bfC\u00f3mo se reparten los gastos?</b></div>
+  <div class="seg"><button data-igual="1" class="${AJ.igual?'on':''}">Por partes iguales</button>
+    <button data-igual="0" class="${AJ.igual?'':'on'}">En otra proporci\u00f3n</button></div>
+  ${AJ.igual?'':`
+  ${hs.map((pp,k)=>`<div class="pl"><span>${esc(pp.n||'Persona '+(k+1))}</span>
+    <input data-pct="${pp.id}" inputmode="numeric" maxlength="3"
+      value="${AJ.pcs[pp.id]||0}" style="text-align:right;width:70px"></div>`).join('')}
+  <p class="hint" style="color:${sp===100?'var(--faint)':'var(--brand)'}">Suman ${sp}%${sp===100?'':' \u2014 tienen que sumar 100'}</p>`}
+  <div class="goal"><div class="l">Les toca poner</div>
+    ${hs.map((pp,k)=>`<div class="pl" style="border:0"><span>${esc(pp.n||'Persona '+(k+1))} \u00b7 ${AJ.pcs[pp.id]||0}%</span>
+      <b style="color:var(--ink);font-size:16px">${fmt(pp.a)}</b></div>`).join('')}
+  </div>`:`
   <div class="goal"><div class="l">Meta de la quincena</div>
-    <div class="v" id="mv">${fmt(m)}</div>
-    <div class="d" id="md">${hs.length>1?'la suma de lo que ponen entre '+hs.length:'lo que pones t\u00fa'}</div></div>
-  ${sug&&dif>0.08?`<div class="ins"><h4>Lo que dice su historial</h4>
-    <p>En sus \u00faltimas quincenas gastaron <span class="a">${fmt(sug)}</span>, y la meta de arriba est\u00e1 en ${fmt(m)}.
-    ${sug>m?'Con esta meta van a ir cortos casi todas las quincenas.':'La meta les est\u00e1 quedando holgada frente a lo que gastan.'}</p>
-    <button class="btn sec2" data-usar="${sug}">Ajustar los aportes a ${fmt(sug)}</button></div>`:''}
+    <div class="v">${fmt(m)}</div><div class="d">lo que pones t\u00fa</div></div>`}
+
   <div class="sec"><b>\u00bfDesde cu\u00e1ndo aplica?</b></div>
   <div class="seg"><button data-vig="siempre" class="${vig==='siempre'?'on':''}">Siempre</button>
   <button data-vig="desde" class="${vig==='desde'?'on':''}">Desde ${q}</button></div>
-  <p class="hint">${vig==='siempre'?'Cambia la meta de todos los periodos, incluido el 2026 que ya est\u00e1 registrado.':'El historial se queda como estaba y la meta nueva aplica de '+q+' en adelante.'}</p>
+  <p class="hint">${vig==='siempre'?'Cambia la meta de todos los periodos, incluido lo que ya est\u00e1 registrado.':'El historial se queda como estaba y la meta nueva aplica de '+q+' en adelante.'}</p>
   <button class="btn" data-gaj="1">Guardar</button>
   ${ms.length?'<div class="sec"><b>Cambios de meta guardados</b></div>'+ms.map(x=>`<button class="row" data-rmeta="${x.id}">
     <span class="ic" style="background:var(--surf3);color:var(--mute);font-size:17px">\u2191</span>
@@ -501,18 +539,14 @@ function vAjustes(){
     <span class="amt" style="font-size:13px;color:var(--brand);font-weight:500">Quitar</span></button>`).join(''):''}
   <div class="spacer"></div>`}
 
-function pintaMeta(){const a=document.getElementById('mv'),b=document.getElementById('md');
-  if(a)a.textContent=fmt(metaAJ());
-  if(b){const n=(AJ.hogar||[]).length;
-    b.textContent=n>1?'la suma de lo que ponen entre '+n:'lo que pones t\u00fa'}}
-function usarSug(v){const need=v,hs=AJ.hogar,tot=sumaAp();
-  let queda=need;
-  hs.forEach((pp,k)=>{const r=tot?(+pp.a||0)/tot:1/hs.length;
-    if(k<hs.length-1){pp.a=Math.round(need*r/10000)*10000;queda-=pp.a}
-    else pp.a=Math.max(queda,0)});
+function usarSug(v){AJ.tot=v;render()}
+function agregaPers(){const id=uid4();
+  AJ.hogar=(AJ.hogar||[]).concat([{id,n:'',a:0,d:0}]);
+  if(AJ.pcs){AJ.pcs[id]=0; if(AJ.igual)AJ.pcs=null}
   render()}
-function agregaPers(){AJ.hogar=(AJ.hogar||[]).concat([{id:uid4(),n:'',a:0,d:0}]);render()}
-function quitaPers(k){if((AJ.hogar||[]).length<2)return;AJ.hogar.splice(k,1);render()}
+function quitaPers(k){if((AJ.hogar||[]).length<2)return;
+  const p=AJ.hogar[k];if(AJ.pcs&&p)delete AJ.pcs[p.id];
+  AJ.hogar.splice(k,1);if(AJ.igual)AJ.pcs=null;render()}
 
 async function guardarAj(){
   const m=metaAJ(),hs=(AJ.hogar||[]).map((pp,k)=>({id:pp.id||uid4(),n:(pp.n||'').trim()||('Persona '+(k+1)),
@@ -691,9 +725,6 @@ function render(){
     n.oninput=e=>{nota=e.target.value;pintaSug()};
     n.onblur=()=>{setTimeout(()=>{if(conceptos[clave(nota)])render()},180)};
     pintaSug()}}
-  scr.querySelectorAll('[data-guarda]').forEach(b=>b.onclick=async()=>{
-    const ap={...entregado()};ap._guarda=b.dataset.guarda;
-    await guardaCierre({aportes:ap});render()});
   scr.querySelectorAll('[data-ent]').forEach(el=>{
     el.oninput=e=>{const d=e.target.value.replace(/\D/g,'');e.target.value=miles(d)};
     el.onblur=async e=>{const d=+(e.target.value.replace(/\D/g,''))||0;
@@ -737,10 +768,16 @@ function render(){
     AJ.hogar[+el.dataset.ph].n=e.target.value;
     const av=el.parentNode.querySelector('.av2');
     if(av)av.textContent=(e.target.value||'?').trim().charAt(0).toUpperCase()||'?'});
-  scr.querySelectorAll('[data-pa],[data-pd]').forEach(el=>el.oninput=e=>{
-    const k=+(el.dataset.pa!==undefined?el.dataset.pa:el.dataset.pd),f=el.dataset.pa!==undefined?'a':'d',
-          d=e.target.value.replace(/\D/g,'');
-    AJ.hogar[k][f]=+d;e.target.value=miles(d);pintaMeta()});
+  {const t=document.getElementById('htot');if(t){
+    t.oninput=e=>{const d=e.target.value.replace(/\D/g,'').slice(0,12);
+      AJ.tot=+d;e.target.value=d?(+d).toLocaleString('es-CO'):''};
+    t.onblur=()=>render()}}
+  scr.querySelectorAll('[data-igual]').forEach(b=>b.onclick=()=>{
+    AJ.igual=b.dataset.igual==='1'; if(AJ.igual)AJ.pcs=null; render()});
+  scr.querySelectorAll('[data-pct]').forEach(el=>{
+    el.oninput=e=>{const d=e.target.value.replace(/\D/g,'').slice(0,3);
+      e.target.value=d; AJ.pcs[el.dataset.pct]=Math.min(+d||0,100)};
+    el.onblur=()=>render()});
   scr.querySelectorAll('[data-addp]').forEach(b=>b.onclick=agregaPers);
   scr.querySelectorAll('[data-rmp]').forEach(b=>b.onclick=()=>quitaPers(+b.dataset.rmp));
   scr.querySelectorAll('[data-vig]').forEach(b=>b.onclick=()=>{vig=b.dataset.vig;render()});
