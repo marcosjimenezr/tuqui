@@ -228,6 +228,15 @@ function vHome(){
       <span class="tx"><b>${esc(e.n)}</b><span>${cadaTxt(e.cada)} · suele ser ${fmt(e.med)}</span></span>
       <span class="amt" style="font-size:13px;color:var(--brand);font-weight:500">Registrar</span></button>`).join('')}
     <p class="hint">Son cosas que ya vienen repitiéndose. Si alguna no aplica este periodo, ignórala — desaparece sola.</p>`})()}
+  ${(()=>{if(H().length<2)return '';
+    const cz=cierres[claveCierre()],hecho=!!(cz&&cz.saldado),cc=cuentas();
+    if(cc.sinAporte)return '';
+    const p=cc.pagos[0];
+    return `<button class="row" data-go2="cierre">
+    <span class="ic" style="background:var(--surf3);color:var(--mute);font-size:16px">\u21c4</span>
+    <span class="tx"><b>Cerrar cuentas</b><span>${hecho?'ya quedaron a paz y salvo'
+      :p?esc(p.de)+' le transfiere '+fmtK(p.v)+' a '+esc(p.a):'nadie le debe nada a nadie'}</span></span>
+    <span class="amt" style="font-size:13px;color:var(--brand);font-weight:500">${hecho?'Ver':'Abrir'}</span></button>`})()}
   <div class="sec"><b>Por categoría</b><span>vs. su promedio</span></div>
   ${list.length?list.map(x=>`<button class="row" data-cat="${x.c.id}">
     <span class="ic" style="background:${x.c.c}">${x.c.n[0]}</span>
@@ -339,108 +348,90 @@ function quienPago(g){
 }
 const claveCierre=()=>modo+'|'+(modo==='q'?Q[i]:MES[i]);
 function entregado(){const c=cierres[claveCierre()];return (c&&c.ap)||{}}
-function cuentas(){
-  const hs=H(), gs=items(i).filter(g=>!g.fon), ent=entregado();
-  const total=gs.reduce((a,g)=>a+g.a,0);
-  const puso={}; hs.forEach(p=>puso[p.id]=0);
-  gs.forEach(g=>{const k=quienPago(g); if(puso[k]!==undefined)puso[k]+=g.a});
-  let sw=hs.reduce((a,p)=>a+(+p.a||0),0);
-  const w=p=>sw>0?(+p.a||0)/sw:1/hs.length;
-  const perQ=p=>modo==='q'?(+p.a||0):(+p.a||0)*2;
-  const gente=hs.map(p=>({id:p.id,n:p.n,puso:puso[p.id]||0,toca:total*w(p),
-      compro:perQ(p), dio:ent[p.id]===undefined?perQ(p):+ent[p.id]||0}))
-                .map(x=>({...x,pend:Math.max(x.compro-x.dio,0),saldo:x.puso-x.toca}));
-  // quien le paga a quien, con el minimo de transferencias
-  const deb=gente.filter(x=>x.saldo<-500).map(x=>({...x,v:-x.saldo})).sort((a,b)=>b.v-a.v);
-  const acr=gente.filter(x=>x.saldo>500).map(x=>({...x,v:x.saldo})).sort((a,b)=>b.v-a.v);
-  const pagos=[]; let a=0,b=0;
-  while(a<deb.length&&b<acr.length){
-    const v=Math.min(deb[a].v,acr[b].v);
-    if(v>500)pagos.push({de:deb[a].n,a:acr[b].n,v:Math.round(v/100)*100});
-    deb[a].v-=v; acr[b].v-=v;
-    if(deb[a].v<=500)a++; if(acr[b].v<=500)b++;
-  }
-  const pendTot=gente.reduce((a,x)=>a+x.pend,0);
-  return {total,gente,pagos,prop:sw>0,pendTot};
-}
+function quienGuarda(){const hs=H(),e=entregado();
+  if(e._guarda&&hs.some(p=>p.id===e._guarda))return e._guarda;
+  return hs[0]?hs[0].id:''}
 
-function netoDos(g){
-  // Para dos personas: el ajuste por gastos y los aportes pendientes, en un solo numero.
-  const [x,y]=g;
-  const v=x.saldo + y.pend - x.pend;   // >0: y le transfiere a x
-  return v>=0?{de:y.n,a:x.n,v}:{de:x.n,a:y.n,v:-v};
+// El aporte es un compromiso: cada quien le debe al hogar su parte completa,
+// la ponga transfiriendola o pagando gastos de su bolsillo. Lo que no se gasta
+// no desaparece: queda guardado para lo que viene.
+function cuentas(){
+  const hs=H(), gs=items(i).filter(g=>!g.fon), ent=entregado(), gid=quienGuarda();
+  const total=gs.reduce((a,g)=>a+g.a,0);
+  const pago={}; hs.forEach(p=>pago[p.id]=0);
+  gs.forEach(g=>{const k=quienPago(g); if(pago[k]!==undefined)pago[k]+=g.a});
+  const perQ=p=>modo==='q'?(+p.a||0):(+p.a||0)*2;
+  const gente=hs.map(p=>{
+    const compro=perQ(p), pg=pago[p.id]||0, dio=+ent[p.id]||0, puso=pg+dio;
+    return {id:p.id,n:p.n,compro,pago:pg,dio,puso,falta:compro-puso,
+            guarda:p.id===gid}});
+  const compTot=gente.reduce((a,x)=>a+x.compro,0), sobra=compTot-total;
+  const quien=gente.find(x=>x.guarda)||gente[0];
+  const pagos=gente.filter(x=>!x.guarda&&Math.abs(x.falta)>500).map(x=>
+    x.falta>0?{de:x.n,a:quien.n,v:Math.round(x.falta/100)*100}
+             :{de:quien.n,a:x.n,v:Math.round(-x.falta/100)*100});
+  return {total,gente,pagos,compTot,sobra,quien,sinAporte:compTot<=0};
 }
 
 function vCierre(){
-  const c=cuentas(), {total,gente,pagos,prop,pendTot}=c, hs=H(),
+  const c=cuentas(), {total,gente,pagos,compTot,sobra,quien,sinAporte}=c, hs=H(),
         cerr=cierres[claveCierre()], firme=cerr&&cerr.saldado,
-        nom=modo==='q'?Q[i].toLowerCase():MES[i].toLowerCase(),
-        dos=hs.length===2, neto=dos?netoDos(gente):null;
-  if(hs.length<2) return topSimple('Cerrar cuentas','','an')+`
+        et=modo==='q'?'quincena':'mes',
+        nom=modo==='q'?Q[i].toLowerCase():MES[i].toLowerCase();
+  if(hs.length<2) return topSimple('Cerrar cuentas','','home')+`
     <p class="hint">El cierre sirve cuando viven dos o m\u00e1s personas. Agrega a quien viva contigo
     en Ajustes \u2192 El hogar y vuelve ac\u00e1.</p><div class="spacer"></div>`;
-  return topSimple('Cerrar cuentas',nom,'an')+`
+  if(sinAporte) return topSimple('Cerrar cuentas',nom,'home')+`
+    <p class="hint">Primero pongan cu\u00e1nto va a poner cada uno por ${et}, en
+    Ajustes \u2192 El hogar. Sin eso no hay nada que cruzar.</p>
+    <button class="btn sec2" data-go2="aj">Ir a El hogar</button><div class="spacer"></div>`;
+  return topSimple('Cerrar cuentas',nom,'home')+`
   ${firme?`<div class="ins good"><h4>Ya quedaron a paz y salvo</h4>
     <p>Cerraron el ${new Date(cerr.en).toLocaleDateString('es-CO',{day:'numeric',month:'long'})}.</p>
     <button class="btn sec2" data-reabrir="1">Reabrir el cierre</button></div>`:''}
 
-  <div class="sec"><b>1 \u00b7 \u00bfYa pusieron su parte?</b><span>${pendTot?fmt(pendTot)+' sin entregar':'todo entregado'}</span></div>
-  ${gente.map((x,k)=>`<div class="pl" style="align-items:flex-start">
-    <span><b style="color:var(--ink)">${esc(x.n)}</b>
-      <em>de ${fmt(x.compro)} que le corresponden${x.pend?' \u00b7 faltan '+fmt(x.pend):' \u00b7 completo'}</em></span>
-    <input data-ent="${x.id}" inputmode="numeric" value="${miles(x.dio)}" placeholder="0"
-      ${firme?'disabled':''}></div>`).join('')}
+  <div class="sec"><b>\u00bfQui\u00e9n guarda la plata del hogar?</b></div>
+  <div class="pills">${hs.map(p=>`<button class="pill ${p.id===quien.id?'sel':''}"
+    data-guarda="${p.id}" ${firme?'disabled':''}>${esc(p.n)}</button>`).join('')}</div>
+  <p class="hint">A esa persona le transfieren los dem\u00e1s lo que les falte.</p>
 
-  <div class="sec"><b>2 \u00b7 Qui\u00e9n puso la plata de los gastos</b></div>
-  <div class="hero" style="padding-top:2px"><div class="lb">Gastaron entre ${hs.length}</div>
-    <div class="big">${fmt(total)}</div>
-    <div class="cmp">${prop?'repartido seg\u00fan lo que pone cada uno':'repartido en partes iguales'}</div></div>
-  ${gente.map((x,k)=>`<div class="row" style="cursor:default">
-    <span class="ic" style="background:${COLP[k%COLP.length]}">${esc((x.n||'?').charAt(0).toUpperCase())}</span>
-    <span class="tx"><b>${esc(x.n)}</b><span>pag\u00f3 ${fmt(x.puso)} \u00b7 le tocaba ${fmt(x.toca)}</span></span>
-    <span class="amt" style="color:${x.saldo>500?'var(--good)':x.saldo<-500?'var(--brand)':'var(--faint)'}">${
-      x.saldo>500?'+'+fmtK(x.saldo):x.saldo<-500?'\u2212'+fmtK(-x.saldo):'al d\u00eda'}</span></div>`).join('')}
+  <div class="sec"><b>Lo que puso cada uno</b><span>de ${fmt(compTot)} comprometidos</span></div>
+  ${gente.map((x,k)=>`<div class="pers">
+    <div class="ph">
+      <span class="av2" style="background:${COLP[k%COLP.length]}">${esc((x.n||'?').charAt(0).toUpperCase())}</span>
+      <b style="flex:1;font-size:15px">${esc(x.n)}${x.guarda?' <span class="tag ed">guarda</span>':''}</b>
+      <span style="font-size:13px;color:${x.falta>500?'var(--brand)':x.falta<-500?'var(--good)':'var(--faint)'}">${
+        x.falta>500?'faltan '+fmt(x.falta):x.falta<-500?'puso '+fmt(-x.falta)+' de m\u00e1s':'al d\u00eda'}</span>
+    </div>
+    <div class="pl"><span>Le corresponde poner</span>
+      <b style="color:var(--ink);font-size:15px">${fmt(x.compro)}</b></div>
+    <div class="pl"><span>Pag\u00f3 gastos del hogar</span>
+      <b style="color:var(--mute);font-size:15px">${fmt(x.pago)}</b></div>
+    <div class="pl"><span>Ya transfiri\u00f3<em>aparte de los gastos que pag\u00f3</em></span>
+      <input data-ent="${x.id}" inputmode="numeric" value="${miles(x.dio)}" placeholder="0"
+        ${firme?'disabled':''}></div>
+  </div>`).join('')}
 
-  <div class="sec"><b>3 \u00b7 El cierre</b></div>
-  ${dos
-   ? (neto.v>500
-      ? `<div class="ins"><h4>${esc(neto.de)} le transfiere ${fmt(Math.round(neto.v/100)*100)} a ${esc(neto.a)}</h4>
-         <p>Sale de dos cosas: el ajuste por lo que pag\u00f3 cada uno${pendTot?' y lo que falta por entregar del aporte':''}.</p></div>`
-      : `<div class="ins good"><h4>No se deben nada</h4>
-         <p>Entre lo que puso cada uno y lo que pag\u00f3, quedan en ceros.</p></div>`)
-   : (pagos.length||pendTot
-      ? `${pagos.map(p=>`<div class="ins"><h4>${esc(p.de)} le debe ${fmt(p.v)} a ${esc(p.a)}</h4>
-           <p>ajuste por los gastos</p></div>`).join('')}
-         ${gente.filter(x=>x.pend>500).map(x=>`<div class="ins"><h4>${esc(x.n)} debe entregar ${fmt(x.pend)}</h4>
-           <p>de su aporte de ${fmt(x.compro)}</p></div>`).join('')}`
-      : `<div class="ins good"><h4>No se deben nada</h4><p>Cada uno puso lo que le tocaba.</p></div>`)}
+  <div class="sec"><b>El cierre</b></div>
+  ${pagos.length?pagos.map(p=>`<div class="ins"><h4>${esc(p.de)} le transfiere ${fmt(p.v)} a ${esc(p.a)}</h4></div>`).join('')
+   :`<div class="ins good"><h4>No se deben nada</h4><p>Cada uno ya puso lo que le correspond\u00eda.</p></div>`}
+
+  <div class="ins ${sobra<0?'':'good'}"><h4>${sobra>=0?'Queda guardado '+fmt(sobra):'Se pasaron por '+fmt(-sobra)}</h4>
+    <p>${sobra>=0
+      ?`De ${fmt(compTot)} gastaron ${fmt(total)}. Lo que sobra queda para lo que viene.`
+      :`Gastaron ${fmt(total)} contra ${fmt(compTot)} comprometidos. Ese exceso sali\u00f3 de otro lado.`}</p></div>
 
   ${firme?'':'<button class="btn" data-cerrar="1">Marcar como saldado</button>'}
   <p class="hint">Se toma como pagador a quien registr\u00f3 cada gasto; si lo pag\u00f3 el otro, c\u00e1mbialo en
-   Movimientos antes de cerrar. Lo que sale de un fondo no entra en el reparto.</p>
+   Movimientos antes de cerrar. Lo que sale de un fondo no entra en el cruce.</p>
   <div class="spacer"></div>`}
-
-async function guardaCierre(campos){
-  const per=modo==='q'?Q[i]:MES[i], prev=cierres[claveCierre()]||{};
-  const fila={household_id:hogarId,periodo:per,modo,
-    total:prev.total||0,detalle:prev.det||[],aportes:prev.ap||{},
-    saldado:!!prev.saldado,...campos};
-  try{await sb.from('closings').upsert(fila,{onConflict:'household_id,periodo,modo'})}
-  catch(e){alert('No se pudo guardar. \u00bfYa corriste el SQL de los cierres?');return}
-  await cargar();
-}
 
 function vAn(){
   const t=tot(i),ap=Math.max(APORTE()-prov(i),0);
-  const cz=cierres[claveCierre()],cerrado=!!(cz&&cz.saldado);
   if(!t)return barra()+'<p class="hint">Registra algunos gastos y aquí aparece la lectura del periodo.</p><div class="spacer"></div>';
   const gaps=CATS.map(c=>({c,v:costo(i,c.id),p:prom(c.id)})).filter(x=>x.p>0).map(x=>({...x,d:x.v-x.p})).sort((a,b)=>b.d-a.d);
   const peor=gaps[0],cub=cubiertos();
   return barra()+`
-  ${H().length>1?`<button class="row" data-go2="cierre">
-    <span class="ic" style="background:var(--surf3);color:var(--mute);font-size:16px">\u21c4</span>
-    <span class="tx"><b>Cerrar cuentas</b><span>${cerrado?'ya quedaron a paz y salvo':'cu\u00e1nto le debe uno al otro'}</span></span>
-    <span class="amt" style="font-size:13px;color:var(--brand);font-weight:500">${cerrado?'Ver':'Abrir'}</span></button>`:''}
   ${!hayMeta()?'':t>ap?`<div class="ins"><h4>${modo==='q'?'Esta quincena':'Este mes'} no alcanzó</h4>
     <p>Gastaron <span class="a">${fmt(t)}</span> contra ${fmt(ap)} disponibles. Faltaron <b>${fmt(t-ap)}</b>.</p></div>`
    :`<div class="ins good"><h4>Van dentro de la meta</h4><p>Gastaron ${fmt(t)} y quedan <span class="a">${fmt(ap-t)}</span>.</p></div>`}
@@ -700,6 +691,9 @@ function render(){
     n.oninput=e=>{nota=e.target.value;pintaSug()};
     n.onblur=()=>{setTimeout(()=>{if(conceptos[clave(nota)])render()},180)};
     pintaSug()}}
+  scr.querySelectorAll('[data-guarda]').forEach(b=>b.onclick=async()=>{
+    const ap={...entregado()};ap._guarda=b.dataset.guarda;
+    await guardaCierre({aportes:ap});render()});
   scr.querySelectorAll('[data-ent]').forEach(el=>{
     el.oninput=e=>{const d=e.target.value.replace(/\D/g,'');e.target.value=miles(d)};
     el.onblur=async e=>{const d=+(e.target.value.replace(/\D/g,''))||0;
