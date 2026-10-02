@@ -155,9 +155,10 @@ function cabecera(){return `<div class="hdr">
 function barra(){const[a,b]=lbl(i);return cabecera()+`<div class="top">
   <button class="step" data-mv="-1" ${i===0?'disabled':''}>‹</button>
   <span class="who"><b>${a}${enHoy()?'<i class="hoy">hoy</i>':''}</b><span>${b}</span></span>
-  <button class="step" data-mv="1" ${i===U().length-1?'disabled':''}>›</button></div>
-  <div class="seg"><button data-modo="q" class="${modo==='q'?'on':''}">Quincena</button>
-  <button data-modo="m" class="${modo==='m'?'on':''}">Mes</button></div>`}
+  <button class="step" data-mv="1" ${i===U().length-1?'disabled':''}>›</button></div>`}
+function segModo(){return `<div class="seg" style="margin-top:12px">
+  <button data-modo="q" class="${modo==='q'?'on':''}">Por quincena</button>
+  <button data-modo="m" class="${modo==='m'?'on':''}">Por mes</button></div>`}
 function topSimple(t,s,back){return `<div class="top">
   ${back?`<button class="step" data-back2="${back}">‹</button>`:'<span style="width:34px"></span>'}
   <span class="who" style="text-align:center"><b>${t}</b><span>${s}</span></span>
@@ -430,10 +431,10 @@ function vCierre(){
 
 function vAn(){
   const t=tot(i),ap=Math.max(APORTE()-prov(i),0);
-  if(!t)return barra()+'<p class="hint">Registra algunos gastos y aquí aparece la lectura del periodo.</p><div class="spacer"></div>';
+  if(!t)return barra()+segModo()+'<p class="hint">Registra algunos gastos y aquí aparece la lectura del periodo.</p><div class="spacer"></div>';
   const gaps=CATS.map(c=>({c,v:costo(i,c.id),p:prom(c.id)})).filter(x=>x.p>0).map(x=>({...x,d:x.v-x.p})).sort((a,b)=>b.d-a.d);
   const peor=gaps[0],cub=cubiertos();
-  return barra()+`
+  return barra()+segModo()+`
   ${!hayMeta()?'':t>ap?`<div class="ins"><h4>${modo==='q'?'Esta quincena':'Este mes'} no alcanzó</h4>
     <p>Gastaron <span class="a">${fmt(t)}</span> contra ${fmt(ap)} disponibles. Faltaron <b>${fmt(t-ap)}</b>.</p></div>`
    :`<div class="ins good"><h4>Van dentro de la meta</h4><p>Gastaron ${fmt(t)} y quedan <span class="a">${fmt(ap-t)}</span>.</p></div>`}
@@ -508,7 +509,11 @@ function vAjustes(){
     </div>`).join('')}
   <button class="addp" data-addp="1">+ Agregar otra persona</button>
 
-  <div class="sec"><b>\u00bfCu\u00e1nto esperan gastar por quincena?</b></div>
+  <div class="sec"><b>\u00bfCada cu\u00e1nto hacen cuentas?</b></div>
+  <div class="seg"><button data-perj="q" class="${(AJ.per||'q')==='q'?'on':''}">Por quincena</button>
+    <button data-perj="m" class="${AJ.per==='m'?'on':''}">Por mes</button></div>
+
+  <div class="sec"><b>\u00bfCu\u00e1nto esperan gastar por ${(AJ.per||'q')==='m'?'mes':'quincena'}?</b></div>
   <div class="amtw"><span class="cur">$</span>
     <input class="amtin" id="htot" inputmode="numeric" placeholder="0"
       value="${AJ.tot?(+AJ.tot).toLocaleString('es-CO'):''}"></div>
@@ -555,7 +560,7 @@ async function guardarAj(){
   const m=metaAJ(),hs=(AJ.hogar||[]).map((pp,k)=>({id:pp.id||uid4(),n:(pp.n||'').trim()||('Persona '+(k+1)),
     a:+pp.a||0,pct:+pp.pct||0,d:0})),
     nuevo={...CFG,hogar:hs,p1:hs[0]?hs[0].n:'Yo',p2:hs[1]?hs[1].n:'Pareja',
-      a1:hs[0]?hs[0].a:0,a2:hs[1]?hs[1].a:0,desc:0};
+      a1:hs[0]?hs[0].a:0,a2:hs[1]?hs[1].a:0,desc:0,per:AJ.per==='m'?'m':'q'};
   if(vig==='siempre'){nuevo.meta=m;const viejas=metas.slice();metas=[];
     if(db){try{await Promise.all(viejas.map(x=>db.collection('metas').doc(x.id).delete()))}catch(e){}}}
   else{const id=uid4(),e2={id,v:m,desde:Q[qIdx()]};
@@ -563,7 +568,7 @@ async function guardarAj(){
     if(db){try{await db.collection('metas').doc(id).set(e2)}catch(e){}}}
   CFG=nuevo;
   if(db){try{await db.collection('config').doc('hogar').set(CFG)}catch(e){}}
-  AJ=null;view='home';det=null;render()}
+  AJ=null;aplicaPer();view='home';det=null;render()}
 async function quitarMeta(id){metas=metas.filter(x=>x.id!==id);render();
   if(db){try{await db.collection('metas').doc(id).delete()}catch(e){}}}
 
@@ -770,6 +775,8 @@ function render(){
     t.oninput=e=>{const d=e.target.value.replace(/\D/g,'').slice(0,12);
       AJ.tot=+d;e.target.value=d?(+d).toLocaleString('es-CO'):''};
     t.onblur=()=>render()}}
+  scr.querySelectorAll('[data-perj]').forEach(b=>b.onclick=()=>{
+    AJ.per=b.dataset.perj; render()});
   scr.querySelectorAll('[data-igual]').forEach(b=>b.onclick=()=>{
     AJ.igual=b.dataset.igual==='1'; if(AJ.igual)AJ.pcs=null; render()});
   scr.querySelectorAll('[data-pct]').forEach(el=>{
@@ -915,7 +922,7 @@ function vCodigo(email, msg){
      o en Promociones.</p>`)}
 
 let NH = null;
-function nhInit(){ if(!NH) NH={nom:'',yo:'',con:null,otros:[''],igual:true,pcs:[]} }
+function nhInit(){ if(!NH) NH={nom:'',yo:'',per:'q',con:null,otros:[''],igual:true,pcs:[]} }
 function nhGente(){ return NH.con==='solo'?[NH.yo||'Yo']:[NH.yo||'Yo'].concat(NH.otros) }
 function nhPcs(){ const n=nhGente().length;
   if(NH.igual||!NH.pcs.length){const e=Math.round(100/n);
@@ -932,6 +939,12 @@ function vCrearHogar(){
    <input class="ginput" id="hNom" placeholder="Nuestro apartamento" autocomplete="off" value="${esc(NH.nom)}">
    <label class="glab">\u00bfC\u00f3mo te llamas?</label>
    <input class="ginput" id="hYo" placeholder="Tu nombre" autocomplete="off" value="${esc(NH.yo)}">
+
+   <label class="glab">\u00bfCada cu\u00e1nto hacen cuentas?</label>
+   <div class="seg" style="margin-top:8px">
+     <button data-per="q" class="${NH.per==='q'?'on':''}">Por quincena</button>
+     <button data-per="m" class="${NH.per==='m'?'on':''}">Por mes</button>
+   </div>
 
    <label class="glab">\u00bfCon qui\u00e9n vives?</label>
    <div class="seg" style="margin-top:8px">
@@ -966,6 +979,8 @@ function vCrearHogar(){
 function pinta(html){ gate.innerHTML = html; gate.hidden = false;
   document.querySelector('.stage').hidden = true }
 function entraApp(){ gate.hidden = true; document.querySelector('.stage').hidden = false }
+function aplicaPer(){ const p = CFG.per==='m'?'m':'q';
+  if (p !== modo) { modo = p; i = iHoy() } }
 
 const soloNum = el => el && (el.oninput = e => {
   const d = e.target.value.replace(/\D/g,''); e.target.value = d ? (+d).toLocaleString('es-CO') : '' });
@@ -1007,6 +1022,7 @@ async function ruta(){
   if (!ms || !ms.length) { mostrarCrear(); return }
   hogarId = ms[0].household_id;
   await cargar();
+  aplicaPer();
   entraApp();
   suscribir();
   render();
@@ -1072,6 +1088,8 @@ function mostrarCrear(){
   g('hNom').oninput = e => NH.nom = e.target.value;
   g('hYo').oninput  = e => NH.yo = e.target.value;
   g('hYo').onblur   = () => { if(!NH.igual) mostrarCrear() };
+  document.querySelectorAll('[data-per]').forEach(b=>b.onclick=()=>{
+    NH.per=b.dataset.per; mostrarCrear()});
   document.querySelectorAll('[data-con]').forEach(b=>b.onclick=()=>{
     NH.con=b.dataset.con;
     if(NH.con==='solo')NH.otros=[];
@@ -1103,13 +1121,14 @@ function mostrarCrear(){
       p_aporte: 0, p_descuento: Math.round(pcs[0]||0) });
     if (error) { ev.target.disabled = false; alert(error.message); return }
     hogarId = data;
+    try{ await sb.from('households').update({ periodo: NH.per||'q' }).eq('id', hogarId) }catch(e){}
     if (nombres.length > 1) {
       try{ await sb.from('members').insert(nombres.slice(1).map((n,k)=>({
         household_id: hogarId, nombre: n, aporte: 0, descuento: Math.round(pcs[k+1]||0) }))) }
       catch(e){ console.warn('miembros', e) }
     }
     NH = null;
-    await cargar(); entraApp(); suscribir(); render();
+    await cargar(); aplicaPer(); entraApp(); suscribir(); render();
   };
 }
 
@@ -1130,6 +1149,7 @@ async function cargar(){
   const miembros = ms.data || [];
 
   CFG = { ...CFG, nombre: hogarRow.nombre || 'Mi hogar', meta: +hogarRow.meta_base || 0,
+          per: hogarRow.periodo === 'm' ? 'm' : 'q',
           hogar: miembros.map(m => ({ id:m.id, n:m.nombre, a:+m.aporte||0, pct:+m.descuento||0,
                                       d:0, u:m.user_id||'' })) };
 
@@ -1205,7 +1225,7 @@ async function borrar(col, id){
 }
 
 async function guardarHogar(c){
-  await sb.from('households').update({ meta_base: c.meta||0 }).eq('id', hogarId);
+  await sb.from('households').update({ meta_base: c.meta||0, periodo: c.per||'q' }).eq('id', hogarId);
   const quedan = (c.hogar||[]).map(p => p.id);
   const { data: actuales } = await sb.from('members').select('id').eq('household_id', hogarId);
   const fuera = (actuales||[]).map(m=>m.id).filter(x => !quedan.includes(x));
