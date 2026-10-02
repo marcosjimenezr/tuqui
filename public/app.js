@@ -26,7 +26,7 @@ const nomPor=v=>{const p=perPor(v);return p?p.n:''};
 function qHoy(){const d=new Date();return MES[d.getMonth()]+' '+(d.getDate()<=15?'1':'2')}
 let modo='q', i=Math.max(Q.indexOf(qHoy()),0), view='home', det=null, db=null,
     nuevos=[], overrides={}, editKey=null, lastKey='', amt='', cat=null, por='', nota='',
-    AJ=null, vig='siempre', cob=1, fon='', fondOv={}, NF=null, NM=null, conceptos={},
+    AJ=null, vig='desde', cob=1, fon='', fondOv={}, NF=null, NM=null, conceptos={},
     catOpen=false, detOpen=false, ultimo=null, cierres={}, vTodo=false;
 
 const U=()=>modo==='q'?Q:MES;
@@ -381,8 +381,11 @@ function cuentas(){
 }
 
 function vCierre(){
-  const c=cuentas(), {total,gente,pagos,pactTot,sobra,sinPacto}=c, hs=H(),
+  const viva=cuentas(), hs=H(),
         cerr=cierres[claveCierre()], firme=cerr&&cerr.saldado,
+        foto=firme&&cerr.ap&&cerr.ap._foto,
+        c=foto?{...viva,...foto,sobra:foto.pactTot-foto.total}:viva,
+        {total,gente,pagos,pactTot,sobra,sinPacto}=c,
         et=modo==='q'?'quincena':'mes',
         nom=modo==='q'?Q[i].toLowerCase():MES[i].toLowerCase();
   if(hs.length<2) return topSimple('Cerrar cuentas','','home')+`
@@ -395,7 +398,8 @@ function vCierre(){
   const pc=x=>Math.round(x.pct*100);
   return topSimple('Cerrar cuentas',nom,'home')+`
   ${firme?`<div class="ins good"><h4>Ya quedaron a paz y salvo</h4>
-    <p>Cerraron el ${new Date(cerr.en).toLocaleDateString('es-CO',{day:'numeric',month:'long'})}.</p>
+    <p>Cerraron el ${new Date(cerr.en).toLocaleDateString('es-CO',{day:'numeric',month:'long'})}.
+    ${foto?'Estos son los n\u00fameros con los que cerraron, aunque despu\u00e9s hayan cambiado el presupuesto.':''}</p>
     <button class="btn sec2" data-reabrir="1">Reabrir el cierre</button></div>`:''}
 
   <div class="hero"><div class="lb">Se gast\u00f3 en ${et==='quincena'?'la quincena':'el mes'}</div>
@@ -538,10 +542,12 @@ function vAjustes(){
   <div class="goal"><div class="l">Meta de la quincena</div>
     <div class="v">${fmt(m)}</div><div class="d">lo que pones t\u00fa</div></div>`}
 
-  <div class="sec"><b>\u00bfDesde cu\u00e1ndo aplica?</b></div>
-  <div class="seg"><button data-vig="siempre" class="${vig==='siempre'?'on':''}">Siempre</button>
-  <button data-vig="desde" class="${vig==='desde'?'on':''}">Desde ${q}</button></div>
-  <p class="hint">${vig==='siempre'?'Cambia la meta de todos los periodos, incluido lo que ya est\u00e1 registrado.':'El historial se queda como estaba y la meta nueva aplica de '+q+' en adelante.'}</p>
+  <div class="sec"><b>\u00bfDesde cu\u00e1ndo vale esto?</b></div>
+  <div class="seg"><button data-vig="desde" class="${vig==='desde'?'on':''}">Desde esta ${modo==='m'?'mes':'quincena'}</button>
+  <button data-vig="siempre" class="${vig==='siempre'?'on':''}">Corregir el pasado</button></div>
+  <p class="hint">${vig==='desde'
+    ? 'Lo anterior se queda como est\u00e1. De <b>'+q+'</b> en adelante, '+fmt(m)+'.'
+    : '<b>Todo</b> el historial pasa a '+fmt(m)+', incluidas las '+(modo==='m'?'meses':'quincenas')+' que ya cerraron. \u00dasalo solo si el valor anterior estaba mal puesto.'}</p>
   <button class="btn" data-gaj="1">Guardar</button>
   ${ms.length?'<div class="sec"><b>Cambios de meta guardados</b></div>'+ms.map(x=>`<button class="row" data-rmeta="${x.id}">
     <span class="ic" style="background:var(--surf3);color:var(--mute);font-size:17px">\u2191</span>
@@ -748,7 +754,11 @@ function render(){
     b.disabled=false});
   scr.querySelectorAll('[data-cerrar]').forEach(b=>b.onclick=async()=>{
     b.disabled=true;const c=cuentas();
-    await guardaCierre({total:Math.round(c.total),detalle:c.pagos,saldado:true,
+    const foto={total:Math.round(c.total),pactTot:Math.round(c.pactTot),
+      pagos:c.pagos,gente:c.gente.map(x=>({n:x.n,pct:x.pct,pago:Math.round(x.pago),
+        toca:Math.round(x.toca),saldo:Math.round(x.saldo)}))};
+    await guardaCierre({total:foto.total,detalle:c.pagos,saldado:true,
+      aportes:{...entregado(),_foto:foto},
       cerrado_por:sesion.user.id,cerrado_en:new Date().toISOString()});
     render()});
   scr.querySelectorAll('[data-reabrir]').forEach(b=>b.onclick=async()=>{
@@ -769,7 +779,7 @@ function render(){
   scr.querySelectorAll('[data-cat]').forEach(b=>b.onclick=()=>{det=b.dataset.cat;render()});
   scr.querySelectorAll('[data-back]').forEach(b=>b.onclick=()=>{det=null;render()});
   scr.querySelectorAll('[data-go2]').forEach(b=>b.onclick=()=>{
-    if(b.dataset.go2==='aj'){AJ={...CFG,hogar:H().map(x=>({...x}))};vig='siempre'}
+    if(b.dataset.go2==='aj'){AJ={...CFG,hogar:H().map(x=>({...x}))};vig='desde'}
     if(b.dataset.go2==='fon'){NF={n:'',c:0};NM={n:'',meta:0,mes:0}}
     if(b.dataset.go2==='reg'){amt='';cat=null;nota='';cob=1;fon='';por='';catOpen=false;detOpen=false;ultimo=null}
     view=b.dataset.go2;det=null;render()});
