@@ -51,8 +51,8 @@ body{margin:0;background:var(--bg);color:var(--ink);
 .av{width:38px;height:38px;border-radius:50%;background:var(--brand);color:#fff;display:grid;place-items:center;
   font-family:"Inter Tight",sans-serif;font-weight:700;font-size:15px;flex:none}
 .top .who{flex:1;min-width:0}
-.top .who b{display:block;font-family:"Inter Tight",sans-serif;font-size:16px;font-weight:700;letter-spacing:-.01em}
-.top .who span{display:block;font-size:11px;color:var(--faint)}
+.top .who b{display:block;font-family:"Inter Tight",sans-serif;font-size:22px;font-weight:700;letter-spacing:-.02em;line-height:1.1}
+.top .who span{display:block;font-size:11px;color:var(--faint);margin-top:2px}
 .step{width:34px;height:34px;border-radius:50%;background:var(--surf2);border:none;color:var(--ink);font-size:16px;cursor:pointer;flex:none}
 .step[disabled]{opacity:.28}
 

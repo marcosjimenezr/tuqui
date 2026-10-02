@@ -132,8 +132,13 @@ const prom=c=>{const n=Math.min(i,modo==='q'?6:3);if(n<1)return 0;let s=0;
 const fmt=v=>'$'+Math.round(v).toLocaleString('es-CO');
 const fmtK=v=>Math.abs(v)>=1000000?'$'+(v/1000000).toFixed(1).replace('.',',')+'M':'$'+Math.round(v/1000)+'k';
 const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
-function lbl(k){if(modo==='m')return[MES[k],'mes completo · 2026'];
-  const[m,n]=Q[k].split(' ');return[(n==='1'?'1ª':'2ª')+' quincena',m.toLowerCase()+' 2026']}
+// Arriba manda el mes; la quincena y los dias van de apoyo.
+const ultimoDia=m=>new Date(2026,MES.indexOf(m)+1,0).getDate();
+function lbl(k){
+  if(modo==='m')return[MES[k],'mes completo · 2026'];
+  const[m,n]=Q[k].split(' ');
+  const rango=n==='1'?'1 al 15':'16 al '+ultimoDia(m);
+  return[m,(n==='1'?'1ª':'2ª')+' quincena · '+rango]}
 function setModo(x){if(x===modo)return;
   if(x==='m')i=MES.indexOf(mesDe(Q[i]));else i=Q.indexOf(MES[i]+' 2');
   modo=x;det=null;render()}
