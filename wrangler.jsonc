@@ -1,0 +1,10 @@
+{
+  // TUQUI se sirve como archivos estaticos. No hay codigo de servidor:
+  // el Worker solo entrega lo que hay en public/.
+  "name": "tuqui",
+  "compatibility_date": "2026-01-01",
+  "assets": {
+    "directory": "./public",
+    "not_found_handling": "single-page-application"
+  }
+}
