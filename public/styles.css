@@ -34,8 +34,8 @@ body{margin:0;background:var(--bg);color:var(--ink);
 
 /* barra superior */
 .hdr{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px 0 0}
-.hdr .hn{font-family:"Inter Tight",sans-serif;font-size:13px;font-weight:600;color:var(--mute);
-  letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.hdr .hn{font-family:"Inter Tight",sans-serif;font-size:15px;font-weight:700;color:var(--ink);
+  letter-spacing:-.015em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .hdr .hoyb{background:var(--surf2);border:none;border-radius:99px;padding:8px 14px;flex:none;
   font-family:Inter,sans-serif;font-size:13px;font-weight:600;color:var(--ink);cursor:pointer}
 .hdr .hoyb:active{background:var(--surf3)}
