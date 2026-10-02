@@ -1277,12 +1277,14 @@ async function revisaVersion(forzado){
     return 'aldia';
   }catch(e){ return 'sinred' }
 }
+// La version viene como "31 \u00b7 2026-10-02 \u00b7 d8b8892"
 function verBonita(v){
-  const m = String(v||'').match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (!m) return v || 'desconocida';
+  const p = String(v||'').split('\u00b7').map(x=>x.trim());
   const MS=['enero','febrero','marzo','abril','mayo','junio','julio',
             'agosto','septiembre','octubre','noviembre','diciembre'];
-  return 'del ' + (+m[3]) + ' de ' + MS[+m[2]-1];
+  const f = (p[1]||'').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!p[0]) return 'desconocida';
+  return p[0] + (f ? ' \u00b7 ' + (+f[3]) + ' de ' + MS[+f[2]-1] : '');
 }
 document.addEventListener('visibilitychange', () => { if (!document.hidden) revisaVersion() });
 window.addEventListener('focus', revisaVersion);
