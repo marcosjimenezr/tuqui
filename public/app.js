@@ -729,7 +729,9 @@ function render(){
   [...tabs.children].forEach(b=>b.classList.toggle('on',b.dataset.go===view));
   const y=scr.scrollTop;
   if(view==='aj'&&!AJ)AJ={...CFG,hogar:H().map(x=>({...x}))};
-  scr.innerHTML=(view==='cierre'?vCierre():view==='cfg'?vConfig():view==='apr'?vAprend():view==='fon'?vFondos():view==='aj'?vAjustes():view==='edit'?vEdit():det?vDet():view==='home'?vHome():view==='reg'?vReg():view==='mov'?vMov():vAn())
+  scr.innerHTML=(avisoInv?`<div class="ins"><h4>No pudimos unirte a ese hogar</h4>
+      <p>${esc(avisoInv)}</p><button class="btn sec2" data-okaviso="1">Entendido</button></div>`:'')
+    +(view==='cierre'?vCierre():view==='cfg'?vConfig():view==='apr'?vAprend():view==='fon'?vFondos():view==='aj'?vAjustes():view==='edit'?vEdit():det?vDet():view==='home'?vHome():view==='reg'?vReg():view==='mov'?vMov():vAn())
     +`<div class="sync ${db?'':'warn'}">${db?'Guardado en tu cuenta':'Sin conexión — no se está guardando'}</div>`;
   if(view==='reg'||view==='edit'){const n=document.getElementById('nota');if(n){
     n.oninput=e=>{nota=e.target.value;pintaSug()};
@@ -751,6 +753,7 @@ function render(){
     render()});
   scr.querySelectorAll('[data-reabrir]').forEach(b=>b.onclick=async()=>{
     b.disabled=true;await guardaCierre({saldado:false});render()});
+  scr.querySelectorAll('[data-okaviso]').forEach(b=>b.onclick=()=>{avisoInv=null;render()});
   scr.querySelectorAll('[data-vtodo]').forEach(b=>b.onclick=()=>{vTodo=!vTodo;render()});
   scr.querySelectorAll('[data-meta0]').forEach(b=>b.onclick=async()=>{
     b.disabled=true;CFG={...CFG,meta:+b.dataset.meta0};
@@ -1008,13 +1011,26 @@ async function arranque(){
   ruta();
 }
 
+let avisoInv = null;
+function guardaInv(){
+  const c = new URLSearchParams(location.search).get('inv');
+  if (!c) return;
+  try { localStorage.setItem('tuqui_inv', c) } catch(e){}
+  history.replaceState({}, '', location.pathname);
+}
+function leeInv(){ try { return localStorage.getItem('tuqui_inv') } catch(e){ return null } }
+function borraInv(){ try { localStorage.removeItem('tuqui_inv') } catch(e){} }
+
 async function ruta(){
+  guardaInv();                       // antes de pedir la sesion, para no perderlo
   if (!sesion) { mostrarLogin(); return }
 
-  // ¿invitación pendiente en la URL?
-  const cod = new URLSearchParams(location.search).get('inv');
-  if (cod) { try { await sb.rpc('aceptar_invitacion', { p_codigo: cod });
-      history.replaceState({}, '', location.pathname) } catch(e){} }
+  const cod = leeInv();
+  if (cod) {
+    const { error } = await sb.rpc('aceptar_invitacion', { p_codigo: cod });
+    borraInv();
+    if (error) avisoInv = 'Esa invitaci\u00f3n ya no sirve \u2014 puede estar vencida o ya usada. P\u00eddele otra a quien te invit\u00f3.';
+  }
 
   const { data: ms, error } = await sb.from('members')
     .select('household_id').eq('user_id', sesion.user.id).limit(1);
@@ -1241,6 +1257,10 @@ async function guardarHogar(c){
 
 /* ---------- invitar ---------- */
 async function invitar(email, memberId){
+  // Si el hogar ya tiene a esa persona creada pero sin cuenta, la invitacion
+  // la engancha a ella en vez de agregar a alguien nuevo. Sin esto el hogar
+  // terminaria con una persona de mas y el reparto se dana.
+  if (!memberId) { const libre = (CFG.hogar||[]).find(x => !x.u); if (libre) memberId = libre.id }
   const { data, error } = await sb.from('invites')
     .insert({ household_id: hogarId, email, member_id: memberId||null,
               creado_por: sesion.user.id }).select('codigo').single();
@@ -1267,6 +1287,7 @@ async function limpiaYRecarga(){
   try{ if (navigator.serviceWorker){
     const rs = await navigator.serviceWorker.getRegistrations();
     await Promise.all(rs.map(r=>r.unregister())) } }catch(e){}
+  try{ guardaInv() }catch(e){}
   location.replace(location.pathname + '?v=' + Date.now());
 }
 // Devuelve 'nueva' | 'aldia' | 'sinred'
