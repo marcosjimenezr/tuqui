@@ -231,15 +231,6 @@ function vHome(){
       <span class="tx"><b>${esc(e.n)}</b><span>${cadaTxt(e.cada)} · suele ser ${fmt(e.med)}</span></span>
       <span class="amt" style="font-size:13px;color:var(--brand);font-weight:500">Registrar</span></button>`).join('')}
     <p class="hint">Son cosas que ya vienen repitiéndose. Si alguna no aplica este periodo, ignórala — desaparece sola.</p>`})()}
-  ${(()=>{if(H().length<2)return '';
-    const cz=cierres[claveCierre()],hecho=!!(cz&&cz.saldado),cc=cuentas();
-    if(cc.sinPacto)return '';
-    const p=cc.pagos[0];
-    return `<button class="row" data-go2="cierre">
-    <span class="ic" style="background:var(--surf3);color:var(--mute);font-size:16px">\u21c4</span>
-    <span class="tx"><b>Cerrar cuentas</b><span>${hecho?'ya quedaron a paz y salvo'
-      :p?esc(p.de)+' le transfiere '+fmtK(p.v)+' a '+esc(p.a):'nadie le debe nada a nadie'}</span></span>
-    <span class="amt" style="font-size:13px;color:var(--brand);font-weight:500">${hecho?'Ver':'Abrir'}</span></button>`})()}
   <div class="sec"><b>Por categoría</b>${list.length>4?`<button class="lnk" data-vtodo="1">${vTodo?'ver menos':'ver todas ('+list.length+')'}</button>`:'<span>vs. su promedio</span>'}</div>
   ${list.length?(vTodo?list:list.slice(0,4)).map(x=>`<button class="row" data-cat="${x.c.id}">
     <span class="ic" style="background:${x.c.c}">${x.c.n[0]}</span>
@@ -248,7 +239,16 @@ function vHome(){
     <span class="amt">${fmtK(x.v)}${x.p?`<em>${x.v>x.p?'+':''}${fmtK(x.v-x.p)}</em>`:''}</span></button>`).join('')
    :'<p class="hint">Todavía no hay gastos en este periodo.</p>'}
   <p class="hint">La línea clara en cada barra es el promedio de ${modo==='q'?'las quincenas':'los meses'} anteriores.</p>
-  <div class="spacer"></div>`}
+  <div class="spacer"></div>
+  ${(()=>{if(H().length<2)return '';
+    const cz=cierres[claveCierre()],hecho=!!(cz&&cz.saldado),cc=cuentas();
+    if(cc.sinPacto)return '';
+    const p=cc.pagos[0];
+    return `<div class="cierrez"><button class="row" data-go2="cierre">
+    <span class="ic" style="background:var(--surf3);color:var(--mute);font-size:16px">\u21c4</span>
+    <span class="tx"><b>Cerrar cuentas</b><span>${hecho?'ya quedaron a paz y salvo'
+      :p?esc(p.de)+' le transfiere '+fmtK(p.v)+' a '+esc(p.a):'nadie le debe nada a nadie'}</span></span>
+    <span class="amt" style="font-size:13px;color:var(--brand);font-weight:500">${hecho?'Ver':'Abrir'}</span></button></div>`})()}`}
 
 function fila(g,sub){const an=g.cob>1,rc=recMap()[clave(g.n)];
   return `<button class="row" data-edit="${g.k}">
