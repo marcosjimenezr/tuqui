@@ -358,8 +358,11 @@ function cuentas(){
   gs.forEach(g=>{const k=quienPago(g); if(pago[k]!==undefined)pago[k]+=g.a});
   const perQ=p=>modo==='q'?(+p.a||0):(+p.a||0)*2;
   const pactTot=hs.reduce((a,p)=>a+perQ(p),0);
+  const spc=hs.reduce((a,p)=>a+(+p.pct||0),0);
   const gente=hs.map(p=>{
-    const pct=pactTot>0?perQ(p)/pactTot:1/hs.length;
+    const pct = spc>0 ? (+p.pct||0)/spc
+              : pactTot>0 ? perQ(p)/pactTot
+              : 1/hs.length;
     const pg=pago[p.id]||0, toca=total*pct;
     return {id:p.id,n:p.n,pct,pact:perQ(p),pago:pg,toca,saldo:pg-toca}});
   const deb=gente.filter(x=>x.saldo<-500).map(x=>({...x,v:-x.saldo})).sort((a,b)=>b.v-a.v);
@@ -371,7 +374,7 @@ function cuentas(){
     deb[m].v-=v; acr[n].v-=v;
     if(deb[m].v<=500)m++; if(acr[n].v<=500)n++;
   }
-  return {total,gente,pagos,pactTot,sobra:pactTot-total,sinPacto:pactTot<=0};
+  return {total,gente,pagos,pactTot,sobra:pactTot-total,sinPacto:spc<=0&&pactTot<=0};
 }
 
 function vCierre(){
@@ -471,8 +474,10 @@ function repInit(){
   const hs=AJ.hogar||[];
   if(AJ.tot===undefined) AJ.tot=hs.reduce((a,p)=>a+(+p.a||0),0);
   if(!AJ.pcs){AJ.pcs={};
-    const t=hs.reduce((a,p)=>a+(+p.a||0),0);
-    hs.forEach(p=>AJ.pcs[p.id]= t>0?Math.round((+p.a||0)/t*100):Math.round(100/hs.length));
+    const sp=hs.reduce((a,p)=>a+(+p.pct||0),0), t=hs.reduce((a,p)=>a+(+p.a||0),0);
+    hs.forEach(p=>AJ.pcs[p.id]= sp>0?Math.round((+p.pct||0)/sp*100)
+                              : t>0?Math.round((+p.a||0)/t*100)
+                              : Math.round(100/hs.length));
     AJ.igual = hs.every(p=>Math.abs(AJ.pcs[p.id]-100/hs.length)<1);
   }
   hs.forEach(p=>{if(AJ.pcs[p.id]===undefined)AJ.pcs[p.id]=0});
@@ -480,6 +485,7 @@ function repInit(){
 function repAplica(){
   const hs=AJ.hogar||[], n=hs.length;
   if(AJ.igual) hs.forEach((p,k)=>AJ.pcs[p.id]= k===0?100-Math.round(100/n)*(n-1):Math.round(100/n));
+  hs.forEach(p=>p.pct=AJ.pcs[p.id]||0);
   let resto=+AJ.tot||0;
   hs.forEach((p,k)=>{
     if(k===n-1){p.a=Math.max(resto,0)}
@@ -547,7 +553,7 @@ function quitaPers(k){if((AJ.hogar||[]).length<2)return;
 
 async function guardarAj(){
   const m=metaAJ(),hs=(AJ.hogar||[]).map((pp,k)=>({id:pp.id||uid4(),n:(pp.n||'').trim()||('Persona '+(k+1)),
-    a:+pp.a||0,d:0})),
+    a:+pp.a||0,pct:+pp.pct||0,d:0})),
     nuevo={...CFG,hogar:hs,p1:hs[0]?hs[0].n:'Yo',p2:hs[1]?hs[1].n:'Pareja',
       a1:hs[0]?hs[0].a:0,a2:hs[1]?hs[1].a:0,desc:0};
   if(vig==='siempre'){nuevo.meta=m;const viejas=metas.slice();metas=[];
@@ -908,17 +914,53 @@ function vCodigo(email, msg){
    <p class="gfoot">El código vence en 10 minutos. Si no lo ves, mira en spam
      o en Promociones.</p>`)}
 
+let NH = null;
+function nhInit(){ if(!NH) NH={nom:'',yo:'',con:null,otros:[''],igual:true,pcs:[]} }
+function nhGente(){ return NH.con==='solo'?[NH.yo||'Yo']:[NH.yo||'Yo'].concat(NH.otros) }
+function nhPcs(){ const n=nhGente().length;
+  if(NH.igual||!NH.pcs.length){const e=Math.round(100/n);
+    NH.pcs=Array.from({length:n},(_,k)=>k===0?100-e*(n-1):e)}
+  while(NH.pcs.length<n)NH.pcs.push(0);
+  NH.pcs.length=n; return NH.pcs }
+
 function vCrearHogar(){
+  nhInit(); const sp=nhPcs().reduce((a,b)=>a+b,0), gs=nhGente();
   return gateHTML(`
    <h1>Arma tu hogar</h1>
-   <p class="gsub">Dos datos y ya. De plata hablamos después, cuando la app los conozca.</p>
-   <label class="glab">¿Cómo se llama tu hogar?</label>
-   <input class="ginput" id="hNom" placeholder="Nuestro apartamento" autocomplete="off">
-   <label class="glab">¿Cómo te llamas?</label>
-   <input class="ginput" id="hYo" placeholder="Tu nombre" autocomplete="off">
-   <p class="gfoot" style="margin-top:14px">No les vamos a pedir una meta todavía. Registren sus gastos
-     unas semanas y la app se las propone con sus propios números.</p>
-   <button class="gbtn gp" id="bCrear">Crear mi hogar</button>
+   <p class="gsub">Unas pocas preguntas. De plata hablamos despu\u00e9s, cuando la app los conozca.</p>
+   <label class="glab">\u00bfC\u00f3mo se llama tu hogar?</label>
+   <input class="ginput" id="hNom" placeholder="Nuestro apartamento" autocomplete="off" value="${esc(NH.nom)}">
+   <label class="glab">\u00bfC\u00f3mo te llamas?</label>
+   <input class="ginput" id="hYo" placeholder="Tu nombre" autocomplete="off" value="${esc(NH.yo)}">
+
+   <label class="glab">\u00bfCon qui\u00e9n vives?</label>
+   <div class="seg" style="margin-top:8px">
+     <button data-con="solo" class="${NH.con==='solo'?'on':''}">Solo</button>
+     <button data-con="pareja" class="${NH.con==='pareja'?'on':''}">En pareja</button>
+     <button data-con="grupo" class="${NH.con==='grupo'?'on':''}">Con m\u00e1s gente</button>
+   </div>
+
+   ${NH.con==='pareja'||NH.con==='grupo'?`
+   <label class="glab">${NH.con==='pareja'?'\u00bfC\u00f3mo se llama?':'\u00bfQui\u00e9nes m\u00e1s viven ah\u00ed?'}</label>
+   ${NH.otros.map((n,k)=>`<input class="ginput" data-otro="${k}" style="margin-top:8px"
+      placeholder="${NH.con==='pareja'?'Su nombre':'Nombre'}" autocomplete="off" value="${esc(n)}">`).join('')}
+   ${NH.con==='grupo'?`<button class="glink" id="bMas">+ Agregar otra persona</button>`:''}
+
+   <label class="glab">\u00bfC\u00f3mo se reparten los gastos?</label>
+   <div class="seg" style="margin-top:8px">
+     <button data-rep="1" class="${NH.igual?'on':''}">Por partes iguales</button>
+     <button data-rep="0" class="${NH.igual?'':'on'}">En otra proporci\u00f3n</button>
+   </div>
+   ${NH.igual?'':`
+   ${gs.map((n,k)=>`<div class="pl"><span>${esc(n||('Persona '+(k+1)))}</span>
+     <input data-npct="${k}" inputmode="numeric" maxlength="3" value="${NH.pcs[k]}"
+       style="text-align:right;width:70px"></div>`).join('')}
+   <p class="gfoot" style="color:${sp===100?'':'var(--brand)'}">Suman ${sp}%${sp===100?'':' \u2014 tienen que sumar 100'}</p>`}
+   `:''}
+
+   <p class="gfoot" style="margin-top:14px">No les vamos a pedir una meta todav\u00eda. Registren sus gastos
+     unas semanas y la app se las propone con sus propios n\u00fameros.</p>
+   <button class="gbtn gp" id="bCrear" ${NH.con&&sp===100?'':'disabled'}>Crear mi hogar</button>
    <button class="glink" id="bSalir">Salir de esta cuenta</button>`)}
 
 function pinta(html){ gate.innerHTML = html; gate.hidden = false;
@@ -1023,16 +1065,51 @@ function mostrarCodigo(msg){
 }
 
 function mostrarCrear(){
+  nhInit();
   pinta(vCrearHogar());
-  document.getElementById('bSalir').onclick = salir;
-  document.getElementById('bCrear').onclick = async (ev) => {
+  const foco=NH._foco; NH._foco=null;
+  const g=(id)=>document.getElementById(id);
+  g('hNom').oninput = e => NH.nom = e.target.value;
+  g('hYo').oninput  = e => NH.yo = e.target.value;
+  g('hYo').onblur   = () => { if(!NH.igual) mostrarCrear() };
+  document.querySelectorAll('[data-con]').forEach(b=>b.onclick=()=>{
+    NH.con=b.dataset.con;
+    if(NH.con==='solo')NH.otros=[];
+    else if(NH.con==='pareja')NH.otros=[NH.otros[0]||''];
+    else if(!NH.otros.length)NH.otros=[''];
+    NH.pcs=[]; mostrarCrear()});
+  document.querySelectorAll('[data-otro]').forEach(el=>{
+    el.oninput=e=>NH.otros[+el.dataset.otro]=e.target.value;
+    el.onblur=()=>{ if(!NH.igual) mostrarCrear() }});
+  const bm=g('bMas'); if(bm)bm.onclick=()=>{
+    NH.otros.push('');NH.pcs=[];NH._foco='otro'+(NH.otros.length-1);mostrarCrear()};
+  document.querySelectorAll('[data-rep]').forEach(b=>b.onclick=()=>{
+    NH.igual=b.dataset.rep==='1'; NH.pcs=[]; mostrarCrear()});
+  document.querySelectorAll('[data-npct]').forEach(el=>{
+    el.oninput=e=>{const d=e.target.value.replace(/\D/g,'').slice(0,3);
+      e.target.value=d; NH.pcs[+el.dataset.npct]=Math.min(+d||0,100)};
+    el.onblur=()=>mostrarCrear()});
+  if(foco){const n=+foco.replace('otro','');
+    const el=document.querySelector('[data-otro="'+n+'"]'); if(el)el.focus()}
+
+  g('bSalir').onclick = salir;
+  g('bCrear').onclick = async (ev) => {
+    const nombres = nhGente().map((n,k)=>(n||'').trim()||(k===0?'Yo':'Persona '+(k+1)));
+    const pcs = nhPcs();
     ev.target.disabled = true;
     const { data, error } = await sb.rpc('crear_hogar', {
-      p_nombre: document.getElementById('hNom').value.trim(),
-      p_mi_nombre: document.getElementById('hYo').value.trim(),
-      p_aporte: 0, p_descuento: 0 });
+      p_nombre: (NH.nom||'').trim(),
+      p_mi_nombre: nombres[0],
+      p_aporte: 0, p_descuento: Math.round(pcs[0]||0) });
     if (error) { ev.target.disabled = false; alert(error.message); return }
-    hogarId = data; await cargar(); entraApp(); suscribir(); render();
+    hogarId = data;
+    if (nombres.length > 1) {
+      try{ await sb.from('members').insert(nombres.slice(1).map((n,k)=>({
+        household_id: hogarId, nombre: n, aporte: 0, descuento: Math.round(pcs[k+1]||0) }))) }
+      catch(e){ console.warn('miembros', e) }
+    }
+    NH = null;
+    await cargar(); entraApp(); suscribir(); render();
   };
 }
 
@@ -1053,8 +1130,8 @@ async function cargar(){
   const miembros = ms.data || [];
 
   CFG = { ...CFG, nombre: hogarRow.nombre || 'Mi hogar', meta: +hogarRow.meta_base || 0,
-          hogar: miembros.map(m => ({ id:m.id, n:m.nombre, a:+m.aporte||0, d:+m.descuento||0,
-                                      u:m.user_id||'' })) };
+          hogar: miembros.map(m => ({ id:m.id, n:m.nombre, a:+m.aporte||0, pct:+m.descuento||0,
+                                      d:0, u:m.user_id||'' })) };
 
   nuevos = (ex.data||[]).map(r => ({ id:r.id, q:r.q, cat:r.cat, n:r.nombre, a:+r.monto,
             cob:+r.cobertura||1, fon:r.fund_id||'', por:r.pagado_por||'',
@@ -1135,7 +1212,7 @@ async function guardarHogar(c){
   if (fuera.length) await sb.from('members').delete().in('id', fuera);
   for (const p of (c.hogar||[])) {
     await sb.from('members').upsert({ id:p.id, household_id:hogarId,
-      nombre:p.n||'', aporte:p.a||0, descuento:p.d||0 });
+      nombre:p.n||'', aporte:p.a||0, descuento:Math.round(p.pct||0) });
   }
 }
 

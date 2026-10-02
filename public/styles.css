@@ -234,6 +234,12 @@ body{margin:0;background:var(--bg);color:var(--ink);
 .pers .ph input{flex:1;min-width:0;border:none;background:none;color:var(--ink);font-family:"Inter Tight",sans-serif;
   font-size:16px;font-weight:700;letter-spacing:-.015em;padding:0;outline:none}
 .pers .x{background:none;border:none;color:var(--brand);font-family:Inter,sans-serif;font-size:11.5px;cursor:pointer;padding:0;flex:none}
+.pl{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:11px}
+.pl>span{font-size:12px;color:var(--mute);flex:1;min-width:0}
+.pl>span em{display:block;font-style:normal;font-size:10.5px;color:var(--faint);margin-top:1px}
+.pl>input{flex:none;border:none;border-radius:13px;padding:10px 13px;background:var(--surf2);
+  color:var(--ink);font-family:"Inter Tight",sans-serif;font-size:15px;font-weight:600;text-align:right;outline:none;
+  font-variant-numeric:tabular-nums}
 .pers .pl{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:11px}
 .pers .pl span{font-size:12px;color:var(--mute);flex:1;min-width:0}
 .pers .pl span em{display:block;font-style:normal;font-size:10.5px;color:var(--faint);margin-top:1px}
