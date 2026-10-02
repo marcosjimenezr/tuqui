@@ -138,7 +138,7 @@ function lbl(k){
   if(modo==='m')return[MES[k],'mes completo · 2026'];
   const[m,n]=Q[k].split(' ');
   const rango=n==='1'?'1 al 15':'16 al '+ultimoDia(m);
-  return[m,(n==='1'?'1ª':'2ª')+' quincena · '+rango]}
+  return[m+'<i class="qq">'+(n==='1'?'1ª':'2ª')+' quincena</i>', rango+' de '+m.toLowerCase()]}
 function setModo(x){if(x===modo)return;
   if(x==='m')i=MES.indexOf(mesDe(Q[i]));else i=Q.indexOf(MES[i]+' 2');
   modo=x;det=null;render()}
