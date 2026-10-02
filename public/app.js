@@ -27,7 +27,7 @@ function qHoy(){const d=new Date();return MES[d.getMonth()]+' '+(d.getDate()<=15
 let modo='q', i=Math.max(Q.indexOf(qHoy()),0), view='home', det=null, db=null,
     nuevos=[], overrides={}, editKey=null, lastKey='', amt='', cat=null, por='', nota='',
     AJ=null, vig='siempre', cob=1, fon='', fondOv={}, NF=null, NM=null, conceptos={},
-    catOpen=false, detOpen=false, ultimo=null, cierres={};
+    catOpen=false, detOpen=false, ultimo=null, cierres={}, vTodo=false;
 
 const U=()=>modo==='q'?Q:MES;
 const qIdx=()=>modo==='q'?i:2*i+1;
@@ -214,12 +214,9 @@ function vHome(){
     <div class="meter"><i class="f" style="width:${Math.min(tl,disp)/esc2*100}%"></i>
       ${over?`<i class="x" style="left:${disp/esc2*100}%;width:${(tl-disp)/esc2*100}%"></i>`:''}
       <u style="left:calc(${disp/esc2*100}% - 1px)"></u></div>
-    ${pv?`<div class="calc">
-      <button class="cw" data-go2="aj"><em>Meta</em><b>${fmtK(ap)}</b></button><i>−</i>
-      <button class="cw" data-go2="fon"><em>Apartado</em><b>${fmtK(pv)}</b></button><i>=</i>
-      <span class="cw on"><em>Para gastar</em><b>${fmtK(disp)}</b></span></div>`
-     :`<div class="mrow"><button class="lnk" data-go2="fon">apartar para metas y para lo que ya viene ›</button>
-       <button class="lnk" data-go2="aj">meta ${fmtK(ap)} · ajustar ›</button></div>`}
+    <div class="mrow">
+      <button class="lnk" data-go2="fon">${pv?'apartado '+fmtK(pv)+' · fondos ›':'apartar para lo que ya viene ›'}</button>
+      <button class="lnk" data-go2="aj">meta ${fmtK(ap)} · ajustar ›</button></div>
   </div>
   ${(()=>{const pd=pendientes();if(!pd.length)return '';
     const sp=pd.reduce((a,e)=>a+e.med,0);
@@ -238,8 +235,8 @@ function vHome(){
     <span class="tx"><b>Cerrar cuentas</b><span>${hecho?'ya quedaron a paz y salvo'
       :p?esc(p.de)+' le transfiere '+fmtK(p.v)+' a '+esc(p.a):'nadie le debe nada a nadie'}</span></span>
     <span class="amt" style="font-size:13px;color:var(--brand);font-weight:500">${hecho?'Ver':'Abrir'}</span></button>`})()}
-  <div class="sec"><b>Por categoría</b><span>vs. su promedio</span></div>
-  ${list.length?list.map(x=>`<button class="row" data-cat="${x.c.id}">
+  <div class="sec"><b>Por categoría</b>${list.length>4?`<button class="lnk" data-vtodo="1">${vTodo?'ver menos':'ver todas ('+list.length+')'}</button>`:'<span>vs. su promedio</span>'}</div>
+  ${list.length?(vTodo?list:list.slice(0,4)).map(x=>`<button class="row" data-cat="${x.c.id}">
     <span class="ic" style="background:${x.c.c}">${x.c.n[0]}</span>
     <span class="tx"><b>${x.c.n}</b>
       <span class="mini-bar"><i style="width:${x.v/mx*100}%;background:${x.c.c}"></i>${x.p?`<u style="left:calc(${Math.min(x.p/mx*100,99)}% - 1px)"></u>`:''}</span></span>
@@ -749,6 +746,7 @@ function render(){
     render()});
   scr.querySelectorAll('[data-reabrir]').forEach(b=>b.onclick=async()=>{
     b.disabled=true;await guardaCierre({saldado:false});render()});
+  scr.querySelectorAll('[data-vtodo]').forEach(b=>b.onclick=()=>{vTodo=!vTodo;render()});
   scr.querySelectorAll('[data-meta0]').forEach(b=>b.onclick=async()=>{
     b.disabled=true;CFG={...CFG,meta:+b.dataset.meta0};
     if(db){try{await db.collection('config').doc('hogar').set(CFG)}catch(e){}}
