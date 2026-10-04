@@ -27,7 +27,7 @@ function qHoy(){const d=new Date();return MES[d.getMonth()]+' '+(d.getDate()<=15
 let modo='q', i=Math.max(Q.indexOf(qHoy()),0), view='home', det=null, db=null,
     nuevos=[], overrides={}, editKey=null, lastKey='', amt='', cat=null, por='', nota='',
     AJ=null, vig='desde', cob=1, fon='', fondOv={}, NF=null, NM=null, conceptos={},
-    catOpen=false, detOpen=false, ultimo=null, cierres={}, vTodo=false;
+    catOpen=false, detOpen=false, ultimo=null, cierres={}, vTodo=false, INV=null;
 
 const U=()=>modo==='q'?Q:MES;
 const qIdx=()=>modo==='q'?i:2*i+1;
@@ -380,6 +380,31 @@ function cuentas(){
   return {total,gente,pagos,pactTot,sobra:pactTot-total,sinPacto:spc<=0&&pactTot<=0};
 }
 
+function vInvitar(){
+  if(!INV) INV={email:'',url:null,err:null};
+  const hs=H(), libre=hs.find(x=>!x.u);
+  return topSimple('Invitar a alguien','para que entre a este hogar','cfg')+`
+  ${INV.url?`
+  <div class="ins good"><h4>Listo, el enlace ya existe</h4>
+    <p>M\u00e1ndaselo por WhatsApp o como prefieras. Al abrirlo entra a <b>${esc(CFG.nombre||'este hogar')}</b>
+    con su propio correo, y ve las mismas cuentas que t\u00fa. Vence en 14 d\u00edas y sirve una sola vez.</p></div>
+  <div class="enl">${esc(INV.url)}</div>
+  <button class="btn" data-share="1">Compartir</button>
+  <button class="btn sec2" data-copiar="1">Copiar el enlace</button>
+  <p class="hint" id="cpok"></p>
+  <button class="glink" data-otroenl="1">Crear otro enlace</button>
+  `:`
+  <p class="hint">${libre
+    ? 'Esta invitaci\u00f3n es para <b>'+esc(libre.n)+'</b>, que ya est\u00e1 en el hogar pero todav\u00eda no tiene cuenta. Al aceptarla, queda enganchada a esa persona \u2014 no se agrega a nadie m\u00e1s.'
+    : 'Todos los del hogar ya tienen cuenta. Si creas esta invitaci\u00f3n, se agrega una persona nueva al hogar.'}</p>
+  <label class="glab2">\u00bfA qu\u00e9 correo se la vas a mandar?</label>
+  <input class="field" id="invmail" type="email" inputmode="email" autocomplete="off"
+    placeholder="correo@ejemplo.com" value="${esc(INV.email)}">
+  <p class="hint">Solo queda anotado para que sepas a qui\u00e9n se la mandaste. Ella entra con el correo que quiera.</p>
+  ${INV.err?`<div class="ins"><h4>No se pudo crear</h4><p>${esc(INV.err)}</p></div>`:''}
+  <button class="btn" data-crear="1">Crear el enlace</button>`}
+  <div class="spacer"></div>`}
+
 function vCierre(){
   const viva=cuentas(), hs=H(),
         cerr=cierres[claveCierre()], firme=cerr&&cerr.saldado,
@@ -703,7 +728,7 @@ function vConfig(){const k=qIdx(),hs=H(),
    <span class="ci"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round"><path d="M4.5 12.5 9 17l10.5-10"/></svg></span>
    <span class="ct"><b>Lo que la app aprendi\u00f3</b><span>${ncc?ncc+' concepto'+(ncc===1?'':'s')+' con respuesta guardada':'todav\u00eda no ha aprendido nada'}</span></span>
    <i>\u203a</i></button>
- <button class="cfgr" data-inv="1">
+ <button class="cfgr" data-go2="inv">
    <span class="ci"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round"><path d="M4 6.5h16v11H4z"/><path d="m4.6 7.2 7.4 5.3 7.4-5.3"/></svg></span>
    <span class="ct"><b>Invitar a alguien</b><span>mandarle un enlace para que entre a este hogar</span></span>
    <i>\u203a</i></button>
@@ -737,7 +762,7 @@ function render(){
   if(view==='aj'&&!AJ)AJ={...CFG,hogar:H().map(x=>({...x}))};
   scr.innerHTML=(avisoInv?`<div class="ins"><h4>No pudimos unirte a ese hogar</h4>
       <p>${esc(avisoInv)}</p><button class="btn sec2" data-okaviso="1">Entendido</button></div>`:'')
-    +(view==='cierre'?vCierre():view==='cfg'?vConfig():view==='apr'?vAprend():view==='fon'?vFondos():view==='aj'?vAjustes():view==='edit'?vEdit():det?vDet():view==='home'?vHome():view==='reg'?vReg():view==='mov'?vMov():vAn())
+    +(view==='inv'?vInvitar():view==='cierre'?vCierre():view==='cfg'?vConfig():view==='apr'?vAprend():view==='fon'?vFondos():view==='aj'?vAjustes():view==='edit'?vEdit():det?vDet():view==='home'?vHome():view==='reg'?vReg():view==='mov'?vMov():vAn())
     +`<div class="sync ${db?'':'warn'}">${db?'Guardado en tu cuenta':'Sin conexión — no se está guardando'}</div>`;
   if(view==='reg'||view==='edit'){const n=document.getElementById('nota');if(n){
     n.oninput=e=>{nota=e.target.value;pintaSug()};
@@ -764,6 +789,22 @@ function render(){
   scr.querySelectorAll('[data-reabrir]').forEach(b=>b.onclick=async()=>{
     b.disabled=true;await guardaCierre({saldado:false});render()});
   scr.querySelectorAll('[data-okaviso]').forEach(b=>b.onclick=()=>{avisoInv=null;render()});
+  {const e=document.getElementById('invmail');
+   if(e)e.oninput=ev=>{INV.email=ev.target.value}}
+  scr.querySelectorAll('[data-crear]').forEach(b=>b.onclick=async()=>{
+    b.disabled=true;b.textContent='Creando\u2026';
+    const url=await invitar((INV.email||'').trim());
+    if(!url){INV.err='Revisa que tengas conexi\u00f3n y vuelve a intentar.';b.disabled=false;b.textContent='Crear el enlace'}
+    else {INV.url=url;INV.err=null}
+    render()});
+  // Compartir va en su propio toque: iOS no deja abrir el men\u00fa despu\u00e9s de esperar al servidor.
+  scr.querySelectorAll('[data-share]').forEach(b=>b.onclick=()=>{
+    const url=INV&&INV.url; if(!url)return;
+    if(navigator.share){ navigator.share({title:'TUQUI',
+      text:'Te invito a nuestro hogar en TUQUI',url}).catch(()=>{}) }
+    else { copiarEnl(url) }});
+  scr.querySelectorAll('[data-copiar]').forEach(b=>b.onclick=()=>copiarEnl(INV&&INV.url));
+  scr.querySelectorAll('[data-otroenl]').forEach(b=>b.onclick=()=>{INV=null;render()});
   scr.querySelectorAll('[data-vtodo]').forEach(b=>b.onclick=()=>{vTodo=!vTodo;render()});
   scr.querySelectorAll('[data-meta0]').forEach(b=>b.onclick=async()=>{
     b.disabled=true;CFG={...CFG,meta:+b.dataset.meta0};
@@ -840,7 +881,7 @@ function render(){
   scr.querySelectorAll('[data-nof]').forEach(b=>b.onclick=()=>descartaSug(b.dataset.nof));
   scr.querySelectorAll('[data-olv]').forEach(b=>b.onclick=()=>olvidar(b.dataset.olv));
   scr.querySelectorAll('[data-out]').forEach(b=>b.onclick=()=>salir());
-  scr.querySelectorAll('[data-inv]').forEach(b=>b.onclick=async()=>{
+  scr.querySelectorAll('[data-noexiste]').forEach(b=>b.onclick=async()=>{
     const em=prompt('\u00bfA qu\u00e9 correo le mandas la invitaci\u00f3n?');
     if(!em)return; const url=await invitar(em.trim());
     if(!url){alert('No se pudo crear la invitaci\u00f3n');return}
@@ -1266,6 +1307,20 @@ async function guardarHogar(c){
 }
 
 /* ---------- invitar ---------- */
+function copiarEnl(url){
+  if(!url)return; const av=document.getElementById('cpok');
+  const ok=()=>{if(av)av.textContent='Enlace copiado \u2014 p\u00e9galo en WhatsApp.'};
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(url).then(ok).catch(()=>seleccionar())
+  } else seleccionar();
+  function seleccionar(){
+    const d=document.querySelector('.enl'); if(!d)return;
+    const r=document.createRange(); r.selectNodeContents(d);
+    const sel=window.getSelection(); sel.removeAllRanges(); sel.addRange(r);
+    if(av)av.textContent='Qued\u00f3 seleccionado: mant\u00e9n presionado y toca Copiar.';
+  }
+}
+
 async function invitar(email, memberId){
   // Si el hogar ya tiene a esa persona creada pero sin cuenta, la invitacion
   // la engancha a ella en vez de agregar a alguien nuevo. Sin esto el hogar
