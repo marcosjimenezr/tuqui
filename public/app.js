@@ -9,17 +9,43 @@ const CATS=[
  {id:'hogar',n:'Casa',c:'#7c9bd6'},
  {id:'servicios',n:'Servicios',c:'#2bb3a3'},{id:'vivienda',n:'Vivienda',c:'#5b8def'},
  {id:'ayuda',n:'Ayuda en casa',c:'#a78bfa'},{id:'salud',n:'Salud',c:'#ff6b6b'},
- {id:'educacion',n:'Educación',c:'#9bcc4a'},{id:'deudas',n:'Deudas y seguros',c:'#b56fd6'},
+ {id:'bienestar',n:'Bienestar',c:'#9bcc4a'},
+ {id:'educacion',n:'Educación',c:'#7b68ee'},{id:'deudas',n:'Deudas y seguros',c:'#b56fd6'},
  {id:'suscrip',n:'Suscripciones',c:'#35b6e8'},{id:'mascotas',n:'Mascotas',c:'#c98a5b'},
  {id:'regalos',n:'Regalos y celebraciones',c:'#ffcc4d'},
  {id:'personal',n:'Personal y ocio',c:'#f472b6'}];
-// Bienestar se fusiono con Personal y ocio. Los gastos viejos que quedaron con la
-// categoria vieja se leen en la nueva, sin tocar la base: ALIAS se aplica al leerlos.
-const ALIAS={bienestar:'personal'};
+// Si alguna vez se fusionan o renombran categorias, aqui se mapea la vieja a la
+// nueva y los gastos ya registrados se leen en la nueva sin tocar la base.
+const ALIAS={};
 // Si algun dia aparece una categoria que ya no existe, cae en Personal y ocio
 // en vez de tumbar la pantalla.
 const norCat=c=>{const k=ALIAS[c]||c;return CM[k]?k:'personal'};
 const CM=Object.fromEntries(CATS.map(c=>[c.id,c]));
+// El acuerdo de que va en cada categoria. Se usa en la pantalla de ayuda y traza a
+// proposito las rayas donde hoy se confunden: Salud vs Bienestar, Vivienda vs Casa.
+const GRUPOS=[
+ {t:'Comida y d&iacute;a a d&iacute;a',ids:['mercado','domicilios','comerfuera','transporte']},
+ {t:'La casa',ids:['vivienda','servicios','hogar','ayuda']},
+ {t:'Cuidado',ids:['salud','bienestar','mascotas']},
+ {t:'Compromisos',ids:['educacion','deudas','suscrip']},
+ {t:'Gustos',ids:['regalos','personal']}];
+const DEF={
+ mercado:'Supermercado, plaza, fruver, carnicer&iacute;a. Lo que compran para cocinar en casa.',
+ domicilios:'Rappi, iFood, el pedido que llega a la puerta.',
+ comerfuera:'Restaurantes, almuerzo del trabajo, caf&eacute;, bar.',
+ transporte:'Gasolina, Uber, taxi, bus, parqueadero, peajes, lavado del carro.',
+ vivienda:'El techo: arriendo, cuota del cr&eacute;dito, administraci&oacute;n.',
+ servicios:'Luz, agua, gas, internet, celular, TV.',
+ hogar:'Lo que hay dentro: muebles, arreglos, ferreter&iacute;a, aseo, electrodom&eacute;sticos.',
+ ayuda:'Empleada, ni&ntilde;era, jardinero, lavander&iacute;a.',
+ salud:'Cuando hay algo que tratar: EPS, prepagada, citas, medicamentos, odont&oacute;logo.',
+ bienestar:'Lo recurrente para el cuerpo y la cabeza: gym, yoga, terapia, peluquer&iacute;a, u&ntilde;as.',
+ mascotas:'Comida, veterinario, guarder&iacute;a, peluquer&iacute;a canina.',
+ educacion:'Colegio, pensi&oacute;n, universidad, cursos, &uacute;tiles, uniformes.',
+ deudas:'Tarjeta, pr&eacute;stamos, cuota del carro, SOAT, p&oacute;lizas, predial.',
+ suscrip:'Netflix, Spotify, iCloud, lo que se cobra solo cada mes.',
+ regalos:'Cumplea&ntilde;os, grados, matrimonios, novenas, diciembre.',
+ personal:'Antojos y gustos: ropa, salidas, cine, hobbies, tecnolog&iacute;a.'};
 const MES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 const Q=[];MES.forEach(m=>{Q.push(m+' 1');Q.push(m+' 2')});
 const DEFMETA=2000000;
@@ -756,6 +782,10 @@ function vConfig(){const k=qIdx(),hs=H(),
    <span class="ci"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round"><path d="M4 8.5h16v10a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5z"/><path d="M7 8.5V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2.5"/><path d="M12 12.5v3.5"/></svg></span>
    <span class="ct"><b>Fondos y metas</b><span>${fs.length?`${nm} meta${nm===1?'':'s'} y ${nf} fondo${nf===1?'':'s'} \u00b7 ${fmt(tc)} por quincena`:'todav\u00eda no apartan nada'}</span></span>
    <i>\u203a</i></button>
+ <button class="cfgr" data-go2="cats">
+   <span class="ci"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round"><path d="M4 5.5h7v14H4z"/><path d="M13 5.5h7v14h-7z"/><path d="M6 9h3M15 9h3M6 12.5h3M15 12.5h3"/></svg></span>
+   <span class="ct"><b>Qu\u00e9 va en cada categor\u00eda</b><span>${CATS.length} categor\u00edas con su definici\u00f3n</span></span>
+   <i>\u203a</i></button>
  <button class="cfgr" data-go2="apr">
    <span class="ci"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round"><path d="M4.5 12.5 9 17l10.5-10"/></svg></span>
    <span class="ct"><b>Lo que la app aprendi\u00f3</b><span>${ncc?ncc+' concepto'+(ncc===1?'':'s')+' con respuesta guardada':'todav\u00eda no ha aprendido nada'}</span></span>
@@ -776,6 +806,23 @@ function vConfig(){const k=qIdx(),hs=H(),
  Nada de esto queda fijo desde el principio \u2014 se ajusta aqu\u00ed cuando pase.</p>
  <div class="spacer"></div>`}
 
+function vCats(){
+ // Si alguna categoria nueva se queda sin grupo, no desaparece: cae al final.
+ const dentro={}; GRUPOS.forEach(g=>g.ids.forEach(x=>dentro[x]=1));
+ const sueltas=CATS.filter(c=>!dentro[c.id]).map(c=>c.id);
+ const gs=sueltas.length?GRUPOS.concat([{t:'Otras',ids:sueltas}]):GRUPOS;
+ return topSimple('Qu&eacute; va en cada una',CATS.length+' categor&iacute;as','cfg')+`
+ <div class="ins"><h4>Para que los dos cuenten igual</h4>
+ <p>Si uno mete la peluquer&iacute;a en Bienestar y el otro en Personal, el reporte no sirve.
+ Esta es la raya acordada.</p></div>
+ ${gs.map(g=>`<span class="glab3">${g.t}</span>
+   ${g.ids.map(id=>{const c=CM[id];return c?`<div class="row def">
+     <span class="ic" style="background:${c.c}">${c.n[0]}</span>
+     <span class="tx"><b>${c.n}</b><span>${DEF[id]||''}</span></span></div>`:''}).join('')}`).join('')}
+ <p class="hint">Si algo no cuadra en ninguna, va en <b>Personal y ocio</b>.
+ Lo importante no es en cu&aacute;l va, sino que siempre vaya en la misma.</p>
+ <div class="spacer"></div>`}
+
 function vAprend(){const cs=Object.values(conceptos);
  return topSimple('Lo que la app aprendi\u00f3','de sus respuestas','cfg')+`
  ${cs.length?cs.map(c=>`<button class="row" data-olv="${c.k}">
@@ -794,7 +841,7 @@ function render(){
   if(view==='aj'&&!AJ)AJ={...CFG,hogar:H().map(x=>({...x}))};
   scr.innerHTML=(avisoInv?`<div class="ins"><h4>No pudimos unirte a ese hogar</h4>
       <p>${esc(avisoInv)}</p><button class="btn sec2" data-okaviso="1">Entendido</button></div>`:'')
-    +(view==='inv'?vInvitar():view==='cierre'?vCierre():view==='cfg'?vConfig():view==='apr'?vAprend():view==='fon'?vFondos():view==='aj'?vAjustes():view==='edit'?vEdit():det?vDet():view==='home'?vHome():view==='reg'?vReg():view==='mov'?vMov():vAn())
+    +(view==='inv'?vInvitar():view==='cierre'?vCierre():view==='cfg'?vConfig():view==='cats'?vCats():view==='apr'?vAprend():view==='fon'?vFondos():view==='aj'?vAjustes():view==='edit'?vEdit():det?vDet():view==='home'?vHome():view==='reg'?vReg():view==='mov'?vMov():vAn())
     +`<div class="sync ${db?'':'warn'}">${db?'Guardado en tu cuenta':'Sin conexión — no se está guardando'}</div>`;
   if(view==='reg'||view==='edit'){const n=document.getElementById('nota');if(n){
     n.oninput=e=>{nota=e.target.value;pintaSug()};

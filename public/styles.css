@@ -149,6 +149,15 @@ body{margin:0;background:var(--bg);color:var(--ink);
 .tag.rc{background:var(--surf3);color:var(--mute);text-transform:none;letter-spacing:0}
 .row.pend .ic{opacity:.55}
 .row.pend b{color:var(--mute)}
+/* pantalla "que va en cada categoria" */
+.glab3{display:block;font-family:"Inter Tight",sans-serif;font-size:11px;color:var(--faint);
+  font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin:22px 2px 4px}
+.row.def{align-items:flex-start;cursor:default;padding:10px 2px}
+.row.def:active{background:none}
+.row.def .ic{width:34px;height:34px;font-size:13px;margin-top:1px}
+.row.def .tx b{font-size:14px}
+.row.def .tx span{white-space:normal;overflow:visible;text-overflow:clip;
+  font-size:12px;line-height:1.45;margin-top:2px}
 .row .x{background:none;border:none;color:var(--brand);font-family:Inter,sans-serif;font-size:11px;cursor:pointer;padding:6px 0 6px 8px;flex:none}
 .mini-bar{height:3px;border-radius:99px;background:var(--surf2);margin-top:6px;overflow:visible;position:relative}
 .mini-bar i{position:absolute;left:0;top:0;bottom:0;border-radius:99px}
