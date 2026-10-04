@@ -504,7 +504,10 @@ const miles=v=>v?(+v).toLocaleString('es-CO'):'';
 // que teclear dos montos. Por dentro se guarda como monto por persona.
 function repInit(){
   const hs=AJ.hogar||[];
-  if(AJ.tot===undefined) AJ.tot=hs.reduce((a,p)=>a+(+p.a||0),0);
+  // Siembra con el pacto que manda en el periodo donde esta parado el usuario,
+  // no con el ultimo que se guardo: asi el campo no miente sobre a que periodo pertenece.
+  if(AJ.tot===undefined){const vg=APORTE();
+    AJ.tot = vg>0?vg:hs.reduce((a,p)=>a+(+p.a||0),0)}
   if(!AJ.pcs){AJ.pcs={};
     const sp=hs.reduce((a,p)=>a+(+p.pct||0),0), t=hs.reduce((a,p)=>a+(+p.a||0),0);
     hs.forEach(p=>AJ.pcs[p.id]= sp>0?Math.round((+p.pct||0)/sp*100)
@@ -525,13 +528,27 @@ function repAplica(){
 }
 const sumaPcs=()=>(AJ.hogar||[]).reduce((a,p)=>a+(+AJ.pcs[p.id]||0),0);
 
+// Nombre legible del periodo donde esta parado el usuario.
+function perNom(){if(modo==='m')return MES[i].toLowerCase();
+  const p=Q[i].split(' ');return p[0].toLowerCase()+', '+(p[1]==='1'?'1&ordf;':'2&ordf;')+' quincena'}
+// Reparto acordado, leido como 50/50.
+function pcTxt(){const hs=CFG.hogar||[],sp=hs.reduce((a,p)=>a+(+p.pct||0),0);
+  if(hs.length<2||sp<=0)return '';
+  return ', repartido '+hs.map(p=>Math.round((+p.pct||0)/sp*100)).join('/')}
+
 function vAjustes(){
   repInit(); repAplica();
   const m=metaAJ(),sug=sugerida(),q=Q[qIdx()].toLowerCase(),
         hs=AJ.hogar||[],
         ms=metas.slice().sort((x,y)=>Q.indexOf(x.desde)-Q.indexOf(y.desde)),
         dif=sug&&m?Math.abs(sug-m)/m:0, sp=sumaPcs();
+  // Historia de pactos: el inicial mas cada cambio, y cual manda en este periodo.
+  const pactos=[{id:'',v:+CFG.meta||0,desde:Q[0],base:1}].concat(ms).filter(x=>x.v>0);
+  let vi=-1; pactos.forEach((x,k)=>{if(Q.indexOf(x.desde)<=qIdx())vi=k});
   return topSimple('El hogar','qui\u00e9nes viven aqu\u00ed y c\u00f3mo se reparten','cfg')+`
+  ${APORTE()>0?`<div class="ins"><h4>Hoy rige ${fmt(APORTE())}</h4>
+  <p>Es el pacto de <b>${perNom()}</b>${pcTxt()}. Lo que cambies aqu&iacute; empieza a valer
+  desde ese periodo &mdash; lo anterior se queda como est&aacute;.</p></div>`:''}
   <div class="sec"><b>\u00bfQui\u00e9nes viven aqu\u00ed?</b><span>${hs.length===1?'1 persona':hs.length+' personas'}</span></div>
   ${hs.map((pp,k)=>`<div class="ph" style="margin-bottom:8px">
       <span class="av2" style="background:${COLP[k%COLP.length]}">${esc((pp.n||'?').trim().charAt(0).toUpperCase()||'?')}</span>
@@ -544,7 +561,7 @@ function vAjustes(){
   <div class="seg"><button data-perj="q" class="${(AJ.per||'q')==='q'?'on':''}">Por quincena</button>
     <button data-perj="m" class="${AJ.per==='m'?'on':''}">Por mes</button></div>
 
-  <div class="sec"><b>\u00bfCu\u00e1nto esperan gastar por ${(AJ.per||'q')==='m'?'mes':'quincena'}?</b></div>
+  <div class="sec"><b>\u00bfCu\u00e1nto esperan gastar en ${perNom()}?</b></div>
   <div class="amtw"><span class="cur">$</span>
     <input class="amtin" id="htot" inputmode="numeric" placeholder="0"
       value="${AJ.tot?(+AJ.tot).toLocaleString('es-CO'):''}"></div>
@@ -573,11 +590,16 @@ function vAjustes(){
   <p class="hint">${vig==='desde'
     ? 'Lo anterior se queda como est\u00e1. De <b>'+q+'</b> en adelante, '+fmt(m)+'.'
     : '<b>Todo</b> el historial pasa a '+fmt(m)+', incluidas las '+(modo==='m'?'meses':'quincenas')+' que ya cerraron. \u00dasalo solo si el valor anterior estaba mal puesto.'}</p>
+  ${pactos.length>1?`
+  <div class="sec"><b>Pactos por periodo</b></div>
+  ${pactos.map((x,k)=>`<div class="row">
+    <span class="ic" style="background:${k===vi?'var(--good-dim)':'var(--surf3)'};color:${k===vi?'var(--good)':'var(--mute)'};font-size:16px">${k===vi?'&#10003;':'&middot;'}</span>
+    <span class="tx"><b>${fmt(x.v)}</b><span>${x.base?'desde el principio':'desde '+x.desde.toLowerCase()}${k===vi?' &middot; rige ahora':''}</span></span>
+    ${x.base?'':`<button class="x" data-rmeta="${x.id}">Quitar</button>`}</div>`).join('')}
+  <p class="hint">Cada pacto manda desde su periodo hasta que empieza el siguiente.
+  Si quitas uno, el anterior vuelve a mandar.</p>`:''}
+
   <button class="btn" data-gaj="1">Guardar</button>
-  ${ms.length?'<div class="sec"><b>Cambios de meta guardados</b></div>'+ms.map(x=>`<button class="row" data-rmeta="${x.id}">
-    <span class="ic" style="background:var(--surf3);color:var(--mute);font-size:17px">\u2191</span>
-    <span class="tx"><b>${fmt(x.v)}</b><span>desde ${x.desde.toLowerCase()}</span></span>
-    <span class="amt" style="font-size:13px;color:var(--brand);font-weight:500">Quitar</span></button>`).join(''):''}
   <div class="spacer"></div>`}
 
 function usarSug(v){AJ.tot=v;render()}
