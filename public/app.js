@@ -2,13 +2,23 @@
 const SEED=[];
 
 const CATS=[
- {id:'vivienda',n:'Vivienda',c:'#5b8def',f:1},{id:'servicios',n:'Servicios',c:'#2bb3a3',f:1},
- {id:'suscrip',n:'Suscripciones',c:'#35b6e8',f:1},{id:'ayuda',n:'Ayuda en casa',c:'#a78bfa',f:1},
+ // El orden manda: las primeras cinco son las que salen de una al registrar,
+ // mientras el hogar no tenga historia propia. Van las del dia a dia primero.
  {id:'mercado',n:'Mercado',c:'#3ecf8e'},{id:'domicilios',n:'Domicilios',c:'#ff8a4c'},
- {id:'comerfuera',n:'Comer fuera',c:'#e5b567'},{id:'bienestar',n:'Bienestar',c:'#9bcc4a'},
- {id:'salud',n:'Salud',c:'#ff6b6b'},{id:'mascotas',n:'Mascotas',c:'#c98a5b'},
- {id:'transporte',n:'Transporte',c:'#9aa5b4'},{id:'hogar',n:'Hogar',c:'#7c9bd6'},
+ {id:'comerfuera',n:'Comer fuera',c:'#e5b567'},{id:'transporte',n:'Transporte',c:'#9aa5b4'},
+ {id:'hogar',n:'Casa',c:'#7c9bd6'},
+ {id:'servicios',n:'Servicios',c:'#2bb3a3'},{id:'vivienda',n:'Vivienda',c:'#5b8def'},
+ {id:'ayuda',n:'Ayuda en casa',c:'#a78bfa'},{id:'salud',n:'Salud',c:'#ff6b6b'},
+ {id:'educacion',n:'Educación',c:'#9bcc4a'},{id:'deudas',n:'Deudas y seguros',c:'#b56fd6'},
+ {id:'suscrip',n:'Suscripciones',c:'#35b6e8'},{id:'mascotas',n:'Mascotas',c:'#c98a5b'},
+ {id:'regalos',n:'Regalos y celebraciones',c:'#ffcc4d'},
  {id:'personal',n:'Personal y ocio',c:'#f472b6'}];
+// Bienestar se fusiono con Personal y ocio. Los gastos viejos que quedaron con la
+// categoria vieja se leen en la nueva, sin tocar la base: ALIAS se aplica al leerlos.
+const ALIAS={bienestar:'personal'};
+// Si algun dia aparece una categoria que ya no existe, cae en Personal y ocio
+// en vez de tumbar la pantalla.
+const norCat=c=>{const k=ALIAS[c]||c;return CM[k]?k:'personal'};
 const CM=Object.fromEntries(CATS.map(c=>[c.id,c]));
 const MES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 const Q=[];MES.forEach(m=>{Q.push(m+' 1');Q.push(m+' 2')});
@@ -39,11 +49,11 @@ const APORTE=()=>modo==='q'?metaQ(i):(metaQ(2*i)+metaQ(2*i+1));
 const mesDe=q=>q.split(' ')[0];
 function todos(){const out=[];
   SEED.forEach((g,ix)=>{const k='s'+ix,ov=overrides[k]||{};if(ov.del)return;
-    out.push({k,q:ov.q||g.q,cat:ov.cat||g.cat,n:ov.n!==undefined?ov.n:g.n,
+    out.push({k,q:ov.q||g.q,cat:norCat(ov.cat||g.cat),n:ov.n!==undefined?ov.n:g.n,
       a:ov.a!==undefined?ov.a:g.a*1000,por:ov.por||0,cob:ov.cob!==undefined?ov.cob:(g.cob||1),
       fon:ov.fon!==undefined?ov.fon:(g.fon||''),
       seed:1,edit:!!ov.cat||ov.n!==undefined||ov.a!==undefined})});
-  nuevos.forEach(g=>out.push({k:g.id,q:g.q,cat:g.cat,n:g.n,a:g.a,por:g.por||0,cob:g.cob||1,fon:g.fon||'',id:g.id,cpor:g.cpor||''}));
+  nuevos.forEach(g=>out.push({k:g.id,q:g.q,cat:norCat(g.cat),n:g.n,a:g.a,por:g.por||0,cob:g.cob||1,fon:g.fon||'',id:g.id,cpor:g.cpor||''}));
   return out}
 const qi=g=>Q.indexOf(g.q);
 const per=g=>(g.cob&&g.cob>1)?g.cob*2:1;
