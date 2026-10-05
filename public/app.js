@@ -4,22 +4,33 @@ const SEED=[];
 const CATS=[
  // El orden manda: las primeras cinco son las que salen de una al registrar,
  // mientras el hogar no tenga historia propia. Van las del dia a dia primero.
- {id:'mercado',n:'Mercado',c:'#3ecf8e'},{id:'domicilios',n:'Domicilios',c:'#ff8a4c'},
- {id:'comerfuera',n:'Comer fuera',c:'#e5b567'},{id:'transporte',n:'Transporte',c:'#9aa5b4'},
- {id:'hogar',n:'Casa',c:'#7c9bd6'},
- {id:'servicios',n:'Servicios',c:'#2bb3a3'},{id:'vivienda',n:'Vivienda',c:'#5b8def'},
- {id:'ayuda',n:'Ayuda en casa',c:'#a78bfa'},{id:'salud',n:'Salud',c:'#ff6b6b'},
- {id:'bienestar',n:'Bienestar',c:'#9bcc4a'},
- {id:'educacion',n:'Educación',c:'#7b68ee'},{id:'deudas',n:'Deudas y seguros',c:'#b56fd6'},
- {id:'suscrip',n:'Suscripciones',c:'#35b6e8'},{id:'mascotas',n:'Mascotas',c:'#c98a5b'},
- {id:'regalos',n:'Regalos y celebraciones',c:'#ffcc4d'},
- {id:'personal',n:'Personal y ocio',c:'#f472b6'}];
+ // c = color de la letra, t = tinte del circulo. Sobre crema un color solido
+ // chilla, asi que el circulo es tinte y el color vive en la letra.
+ {id:'mercado',n:'Mercado',c:'#3F7A5C',t:'#E2EDE5'},
+ {id:'domicilios',n:'Domicilios',c:'#C2622E',t:'#F6E6DA'},
+ {id:'comerfuera',n:'Comer fuera',c:'#9A7420',t:'#F2EBD8'},
+ {id:'transporte',n:'Transporte',c:'#656B76',t:'#E8E8EA'},
+ {id:'hogar',n:'Casa',c:'#55728C',t:'#E3EAEF'},
+ {id:'servicios',n:'Servicios',c:'#2F7E79',t:'#DFEEEC'},
+ {id:'vivienda',n:'Vivienda',c:'#45689C',t:'#E2E8F2'},
+ {id:'ayuda',n:'Ayuda en casa',c:'#73589F',t:'#EAE4F3'},
+ {id:'salud',n:'Salud',c:'#AA4545',t:'#F6E3E3'},
+ {id:'bienestar',n:'Bienestar',c:'#64802E',t:'#EDF1DD'},
+ {id:'educacion',n:'Educación',c:'#5555A6',t:'#E5E5F4'},
+ {id:'deudas',n:'Deudas y seguros',c:'#85539F',t:'#EFE4F4'},
+ {id:'suscrip',n:'Suscripciones',c:'#357697',t:'#E0ECF2'},
+ {id:'mascotas',n:'Mascotas',c:'#8C5D38',t:'#F1E7DC'},
+ {id:'regalos',n:'Regalos y celebraciones',c:'#9E6D1A',t:'#F5EDD7'},
+ {id:'personal',n:'Personal y ocio',c:'#A94B73',t:'#F7E3EC'}];
 // Si alguna vez se fusionan o renombran categorias, aqui se mapea la vieja a la
 // nueva y los gastos ya registrados se leen en la nueva sin tocar la base.
 const ALIAS={};
 // Si algun dia aparece una categoria que ya no existe, cae en Personal y ocio
 // en vez de tumbar la pantalla.
 const norCat=c=>{const k=ALIAS[c]||c;return CM[k]?k:'personal'};
+// Estilo del circulo de categoria: tinte de fondo, color en la letra.
+const icSt=id=>{const c=CM[id]||{c:'#8A8378',t:'#E6E1D8'};
+  return 'background:'+c.t+';color:'+c.c};
 const CM=Object.fromEntries(CATS.map(c=>[c.id,c]));
 // El acuerdo de que va en cada categoria. Se usa en la pantalla de ayuda y traza a
 // proposito las rayas donde hoy se confunden: Salud vs Bienestar, Vivienda vs Casa.
@@ -51,7 +62,7 @@ const Q=[];MES.forEach(m=>{Q.push(m+' 1');Q.push(m+' 2')});
 const DEFMETA=2000000;
 let CFG={a1:1250000,a2:1250000,desc:500000,p1:'Mark',p2:'Esposa',meta:DEFMETA};
 let metas=[];
-const COLP=['#e0536b','#5b8def','#3ecf8e','#e5b567','#a78bfa','#2bb3a3'];
+const COLP=['#C2622E','#45689C','#3F7A5C','#9E6D1A','#73589F','#2F7E79'];
 function H(){if(CFG.hogar&&CFG.hogar.length)return CFG.hogar;
   return [{id:'p1',n:CFG.p1||'Yo',a:+CFG.a1||0,d:0},
           {id:'p2',n:CFG.p2||'Pareja',a:+CFG.a2||0,d:0}]}
@@ -190,7 +201,7 @@ function cabecera(){return `<div class="hdr">
   <span class="hn">${esc(CFG.nombre||'Mi hogar')}</span>
   ${(view==='home'||view==='mov'||view==='an')&&!enHoy()?'<button class="hoyb" data-hoy="1">Hoy</button>':''}
   <button class="hg" data-go2="cfg" aria-label="Ajustes">
-    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round">
+    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round">
     <circle cx="12" cy="12" r="3.3"/><path d="M12 3.5v2M12 18.5v2M3.5 12h2M18.5 12h2M6 6l1.4 1.4M16.6 16.6 18 18M18 6l-1.4 1.4M7.4 16.6 6 18"/></svg>
   </button></div>`}
 function barra(){const[a,b]=lbl(i);return cabecera()+`<div class="top">
@@ -231,7 +242,7 @@ function vDescubrir(){
     <p>Llevan <b>${prev.length}</b> ${prev.length===1?'quincena cerrada':'quincenas cerradas'} con gastos.</p></div>`}
   ${list.length?`<div class="sec"><b>En qu\u00e9 se ha ido</b></div>
   ${list.map(x=>`<button class="row" data-cat="${x.c.id}">
-    <span class="ic" style="background:${x.c.c}">${x.c.n[0]}</span>
+    <span class="ic" style="${icSt(x.c.id)}">${x.c.n[0]}</span>
     <span class="tx"><b>${x.c.n}</b><span class="bar"><i style="width:${x.v/mx*100}%;background:${x.c.c}"></i></span></span>
     <span class="amt">${fmtK(x.v)}</span></button>`).join('')}`:''}
   <div class="spacer"></div>`}
@@ -263,13 +274,13 @@ function vHome(){
     const sp=pd.reduce((a,e)=>a+e.med,0);
     return `<div class="sec"><b>Todavía no ha llegado</b><span>${fmt(sp)} aprox.</span></div>
     ${pd.map(e=>`<button class="row pend" data-pend="${esc(e.k)}">
-      <span class="ic" style="background:${(CM[e.cat]||{c:'#5f666e'}).c}">${(CM[e.cat]||{n:'?'}).n[0]}</span>
+      <span class="ic" style="${icSt(e.cat)}">${(CM[e.cat]||{n:'?'}).n[0]}</span>
       <span class="tx"><b>${esc(e.n)}</b><span>${cadaTxt(e.cada)} · suele ser ${fmt(e.med)}</span></span>
       <span class="amt" style="font-size:13px;color:var(--brand);font-weight:500">Registrar</span></button>`).join('')}
     <p class="hint">Son cosas que ya vienen repitiéndose. Si alguna no aplica este periodo, ignórala — desaparece sola.</p>`})()}
   <div class="sec"><b>Por categoría</b>${list.length>4?`<button class="lnk" data-vtodo="1">${vTodo?'ver menos':'ver todas ('+list.length+')'}</button>`:'<span>vs. su promedio</span>'}</div>
   ${list.length?(vTodo?list:list.slice(0,4)).map(x=>`<button class="row" data-cat="${x.c.id}">
-    <span class="ic" style="background:${x.c.c}">${x.c.n[0]}</span>
+    <span class="ic" style="${icSt(x.c.id)}">${x.c.n[0]}</span>
     <span class="tx"><b>${x.c.n}</b>
       <span class="mini-bar"><i style="width:${x.v/mx*100}%;background:${x.c.c}"></i>${x.p?`<u style="left:calc(${Math.min(x.p/mx*100,99)}% - 1px)"></u>`:''}</span></span>
     <span class="amt">${fmtK(x.v)}${x.p?`<em>${x.v>x.p?'+':''}${fmtK(x.v-x.p)}</em>`:''}</span></button>`).join('')
@@ -301,7 +312,7 @@ function fechaReg(iso){
 
 function fila(g,sub,fecha){const an=g.cob>1,rc=recMap()[clave(g.n)];
   return `<button class="row" data-edit="${g.k}">
-  <span class="ic" style="background:${CM[g.cat].c}">${CM[g.cat].n[0]}</span>
+  <span class="ic" style="${icSt(g.cat)}">${CM[g.cat].n[0]}</span>
   <span class="tx"><b>${esc(g.n)}${an?`<span class="tag an">${g.cob} meses</span>`:''}${
     !an&&rc?`<span class="tag rc">\u21bb ${cadaTxt(rc.cada)}</span>`:''}</b>
   <span>${an?fmt(g.a/per(g))+' por quincena · cubre hasta '+hastaQ(g).toLowerCase():sub}</span></span>
@@ -351,7 +362,7 @@ function formulario(modoEdit){
     <button data-undo="1">Deshacer</button></div>`:''}
   ${!modoEdit&&at.length?`<div class="sec"><b>Lo de siempre</b><span>toca y ajusta</span></div>
   <div class="sugn atj">${at.map(e=>`<button data-at="${esc(e.n)}" data-ac="${e.cat}" data-am="${Math.round(e.med)}">
-    <span class="k" style="background:${(CM[e.cat]||{c:'#5f666e'}).c}"></span>
+    <span class="k" style="background:${(CM[e.cat]||{c:'#8A8378'}).c}"></span>
     <span><b>${esc(e.n)}</b><em>${fmtK(e.med)} de costumbre</em></span></button>`).join('')}</div>`:''}
   <div class="sec"><b>¿Cuánto?</b><span>en pesos</span></div>
   <div class="amtw"><span class="cur">$</span>
@@ -771,7 +782,7 @@ function pintaCuota(){const b=document.querySelector('[data-crm]');
   if(b)b.disabled=!(NM&&NM.n&&NM.meta&&NM.mes)}
 function pintaSug(){const c=document.getElementById('sugn');if(!c)return;
   const l=sugNombres(nota);
-  c.innerHTML=l.map(e=>{const k=CM[e.cat]||{n:'?',c:'#5f666e'};
+  c.innerHTML=l.map(e=>{const k=CM[e.cat]||{n:'?',c:'#8A8378'};
     return `<button data-sn="${esc(e.n)}" data-sc="${e.cat}">
       <span class="k" style="background:${k.c}"></span>
       <span><b>${esc(e.n)}</b><em>${k.n}${e.mix?' y otras':''} \u00b7 ${e.v===1?'1 vez':e.v+' veces'} \u00b7 ${fmtK(e.med)}</em></span>
@@ -789,31 +800,31 @@ function vConfig(){const k=qIdx(),hs=H(),
   ncc=Object.keys(conceptos).length;
  return topSimple('Configuraci\u00f3n','todo se puede cambiar cuando quieran','home')+`
  <button class="cfgr" data-go2="aj">
-   <span class="ci"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c.6-3 2.8-4.6 5.5-4.6s4.9 1.6 5.5 4.6"/><circle cx="17.5" cy="8.5" r="2.4"/><path d="M16 13.6c2.6-.3 4.4 1.2 4.9 4"/></svg></span>
+   <span class="ci"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c.6-3 2.8-4.6 5.5-4.6s4.9 1.6 5.5 4.6"/><circle cx="17.5" cy="8.5" r="2.4"/><path d="M16 13.6c2.6-.3 4.4 1.2 4.9 4"/></svg></span>
    <span class="ct"><b>El hogar</b><span>${hs.map(p=>esc(p.n)).join(', ')} \u00b7 meta ${fmt(ap)} por quincena</span></span>
    <i>\u203a</i></button>
  <button class="cfgr" data-go2="fon">
-   <span class="ci"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round"><path d="M4 8.5h16v10a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5z"/><path d="M7 8.5V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2.5"/><path d="M12 12.5v3.5"/></svg></span>
+   <span class="ci"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 8.5h16v10a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5z"/><path d="M7 8.5V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2.5"/><path d="M12 12.5v3.5"/></svg></span>
    <span class="ct"><b>Fondos y metas</b><span>${fs.length?`${nm} meta${nm===1?'':'s'} y ${nf} fondo${nf===1?'':'s'} \u00b7 ${fmt(tc)} por quincena`:'todav\u00eda no apartan nada'}</span></span>
    <i>\u203a</i></button>
  <button class="cfgr" data-go2="cats">
-   <span class="ci"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round"><path d="M4 5.5h7v14H4z"/><path d="M13 5.5h7v14h-7z"/><path d="M6 9h3M15 9h3M6 12.5h3M15 12.5h3"/></svg></span>
+   <span class="ci"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 5.5h7v14H4z"/><path d="M13 5.5h7v14h-7z"/><path d="M6 9h3M15 9h3M6 12.5h3M15 12.5h3"/></svg></span>
    <span class="ct"><b>Qu\u00e9 va en cada categor\u00eda</b><span>${CATS.length} categor\u00edas con su definici\u00f3n</span></span>
    <i>\u203a</i></button>
  <button class="cfgr" data-go2="apr">
-   <span class="ci"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round"><path d="M4.5 12.5 9 17l10.5-10"/></svg></span>
+   <span class="ci"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4.5 12.5 9 17l10.5-10"/></svg></span>
    <span class="ct"><b>Lo que la app aprendi\u00f3</b><span>${ncc?ncc+' concepto'+(ncc===1?'':'s')+' con respuesta guardada':'todav\u00eda no ha aprendido nada'}</span></span>
    <i>\u203a</i></button>
  <button class="cfgr" data-go2="inv">
-   <span class="ci"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round"><path d="M4 6.5h16v11H4z"/><path d="m4.6 7.2 7.4 5.3 7.4-5.3"/></svg></span>
+   <span class="ci"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 6.5h16v11H4z"/><path d="m4.6 7.2 7.4 5.3 7.4-5.3"/></svg></span>
    <span class="ct"><b>Invitar a alguien</b><span>mandarle un enlace para que entre a este hogar</span></span>
    <i>\u203a</i></button>
  <button class="cfgr" data-out="1">
-   <span class="ci"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#e0536b" stroke-width="1.9" stroke-linecap="round"><path d="M14 4.5H6.5A1.5 1.5 0 0 0 5 6v12a1.5 1.5 0 0 0 1.5 1.5H14"/><path d="M17 8.5 20.5 12 17 15.5M20 12H10"/></svg></span>
+   <span class="ci" style="color:var(--brand)"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M14 4.5H6.5A1.5 1.5 0 0 0 5 6v12a1.5 1.5 0 0 0 1.5 1.5H14"/><path d="M17 8.5 20.5 12 17 15.5M20 12H10"/></svg></span>
    <span class="ct"><b>Cerrar sesión</b><span>${(sesion&&sesion.user&&sesion.user.email)||''}</span></span>
    <i>\u203a</i></button>
  <button class="cfgr" data-upd="1">
-   <span class="ci"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round"><path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20 4v4.5h-4.5"/></svg></span>
+   <span class="ci"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20 4v4.5h-4.5"/></svg></span>
    <span class="ct"><b>Buscar actualizaci\u00f3n</b><span id="vst">versi\u00f3n ${verBonita(MIVER)}</span></span>
    <i>\u203a</i></button>
  <p class="hint">El hogar puede cambiar: alguien entra, alguien sale, o cambia lo que pone cada uno.
@@ -831,7 +842,7 @@ function vCats(){
  Esta es la raya acordada.</p></div>
  ${gs.map(g=>`<span class="glab3">${g.t}</span>
    ${g.ids.map(id=>{const c=CM[id];return c?`<div class="row def">
-     <span class="ic" style="background:${c.c}">${c.n[0]}</span>
+     <span class="ic" style="${icSt(id)}">${c.n[0]}</span>
      <span class="tx"><b>${c.n}</b><span>${DEF[id]||''}</span></span></div>`:''}).join('')}`).join('')}
  <p class="hint">Si algo no cuadra en ninguna, va en <b>Personal y ocio</b>.
  Lo importante no es en cu&aacute;l va, sino que siempre vaya en la misma.</p>
@@ -1036,7 +1047,7 @@ let sb = null, sesion = null, hogarId = null, hogarRow = null, gate = null, pend
 /* ---------- pantallas de cuenta ---------- */
 function gateHTML(inner){ return `<div class="gate"><div class="gcard">
   <div class="glogo"><svg width="34" height="34" viewBox="0 0 24 24" fill="none"
-    stroke="#e0536b" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+    stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
     <path d="M3.5 11.2 12 4.5l8.5 6.7"/><path d="M5.5 10.6V19h13v-8.4"/><path d="M4 19.5h16"/></svg></div>
   ${inner}</div></div>`}
 

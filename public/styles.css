@@ -1,13 +1,13 @@
 
 :root{
-  /* Cuatro grises y tres colores con significado. Nada mas.
-     --faint y --surf3 se conservan como alias para no romper reglas viejas. */
-  --bg:#0a0b0d; --surf:#17191c; --surf2:#1e2125; --line:#2b2f34;
-  --ink:#f7f8fa; --mute:#9ba2aa;
-  --surf3:var(--line); --faint:#868d96;
-  --brand:#ff5c75; --brand-dim:#3a1a21;
-  --good:#35d08a; --good-dim:#10301f;
-  --over:#f5a94a; --over-dim:#332312;
+  /* Piel clara. Base calida tomada del sistema de referencia; los tres colores
+     que cargan significado se construyeron aparte, porque ese sistema solo trae uno. */
+  --bg:#F5F2ED; --surf:#EDE7DF; --surf2:#F0EDE9; --line:#DFD6C8;
+  --ink:#1A1A1A; --mute:#6B7280;
+  --surf3:#E4DCCF; --faint:#8A8378;
+  --brand:#D97757; --brand-dim:#F7E7DE;
+  --good:#3F7A5C; --good-dim:#E3EDE6;
+  --over:#B14A28; --over-dim:#F7E2D8;
   --r-card:16px; --r-pill:999px;
 }
 html,body{height:100%}
@@ -327,3 +327,49 @@ html,body{max-width:100%;overflow-x:hidden}
 .stage,.phone,.scr{max-width:100%}
 .hero .big{font-size:clamp(30px,11vw,48px);word-break:break-word}
 .hero .cmp{word-break:break-word}
+
+
+/* ---------- ajustes de la piel clara ----------
+   Lo que estaba fijado a un valor pensado para fondo negro. Va al final a
+   proposito: misma especificidad, gana el ultimo. */
+.stage{background:#EAE5DC}
+.phone{box-shadow:0 10px 30px rgba(60,45,30,.10)}
+.ic{color:var(--ink)}
+.meter{background:#E0D8CA}
+.card .sh,.pgr{background:#E0D8CA}
+
+/* botones */
+.btn{background:var(--brand);color:#fff}
+.gbtn.gg{background:#fff;color:#1a1a1a;border:1px solid var(--line)}
+.gbtn.ga{background:#1A1A1A;color:#fff;border:1px solid #1A1A1A}
+
+/* iconos: heredan el color del contenedor en vez de ser blancos */
+.hdr .hg{color:var(--ink)}
+.cfgr .ci{color:var(--ink);background:var(--surf2)}
+.glogo{color:var(--brand)}
+.act .c{color:var(--ink)}
+.act.pri .c{background:var(--brand);color:#fff}
+
+/* personas y etiquetas */
+.pers .av2,.ph .av2{color:#fff}
+.tag.an{background:var(--surf3);color:var(--mute)}
+.saved{color:var(--good);background:var(--good-dim)}
+.saved b{color:var(--ink)}
+.saved button{color:var(--good)}
+
+/* el bloque de meta ya no necesita degradado: sobre crema basta el borde */
+.fond.mta{background:var(--surf);border:1px solid var(--line)}
+
+/* campos: sobre crema un borde lee mejor que un relleno */
+.field,.selq{border:1px solid var(--line)}
+
+/* cuando se pasan, se tine el bloque entero */
+.hero.over{background:var(--over-dim);border-radius:20px;padding:14px 14px 12px;margin-top:8px}
+.hero.over .lb{color:var(--over)}
+
+/* controles: sobre crema lo seleccionado se eleva en blanco, no se oscurece */
+.seg button.on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(60,45,30,.14)}
+.pill.sel{background:var(--brand-dim);color:#8A3C1E;box-shadow:inset 0 0 0 1px #E7BFAC}
+.hdr .hoyb,.hdr .hg,.step{background:var(--surf)}
+.hdr .hoyb:active,.hdr .hg:active,.step:active{background:var(--surf3)}
+.tab.on{color:var(--brand)}
