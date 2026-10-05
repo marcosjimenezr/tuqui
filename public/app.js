@@ -91,7 +91,7 @@ function qHoy(){const d=new Date();return MES[d.getMonth()]+' '+(d.getDate()<=15
 let modo='q', i=Math.max(Q.indexOf(qHoy()),0), view='home', det=null, db=null,
     nuevos=[], overrides={}, editKey=null, lastKey='', amt='', cat=null, por='', nota='',
     AJ=null, vig='desde', cob=1, fon='', fondOv={}, NF=null, NM=null, conceptos={},
-    catOpen=false, detOpen=false, ultimo=null, cierres={}, vTodo=false, INV=null,
+    catOpen=false, detOpen=false, ultimo=null, cierres={}, INV=null,
     perBack='home';
 
 const U=()=>modo==='q'?Q:MES;
@@ -332,14 +332,14 @@ function vHome(){
       <span class="tx"><b>${esc(e.n)}</b><span>${cadaTxt(e.cada)} · suele ser ${fmt(e.med)}</span></span>
       <span class="amt" style="font-size:13px;color:var(--brand);font-weight:500">Registrar</span></button>`).join('')}
     <p class="hint">Son cosas que ya vienen repitiéndose. Si alguna no aplica este periodo, ignórala — desaparece sola.</p>`})()}
-  <div class="sec"><b>Por categoría</b>${list.length>4?`<button class="lnk" data-vtodo="1">${vTodo?'ver menos':'ver todas ('+list.length+')'}</button>`:'<span>vs. su promedio</span>'}</div>
-  ${list.length?(vTodo?list:list.slice(0,4)).map(x=>`<button class="row" data-cat="${x.c.id}">
+  <div class="sec"><b>Por categoría</b><span>${list.length} ${list.length===1?'categor\u00eda':'categor\u00edas'} · vs. su promedio</span></div>
+  ${list.length?list.map(x=>`<button class="row" data-cat="${x.c.id}">
     ${icCat(x.c.id)}
     <span class="tx"><b>${x.c.n}<i class="pc">${x.pc}%</i></b>
       <span class="mini-bar"><i style="width:${x.v/mx*100}%;background:${x.c.c}"></i>${x.p?`<u style="left:calc(${Math.min(x.p/mx*100,99)}% - 1px)"></u>`:''}</span></span>
     <span class="amt">${fmtK(x.v)}</span></button>`).join('')
    :'<p class="hint">Todavía no hay gastos en este periodo.</p>'}
-  <p class="hint">El porcentaje es sobre el total gastado en ${modo==='q'?'la quincena':'el mes'}${!vTodo&&list.length>4?' — aquí ves solo las 4 más grandes, por eso no suman 100':''}. La línea clara en cada barra es el promedio de ${modo==='q'?'las quincenas':'los meses'} anteriores.</p>
+  <p class="hint">El porcentaje es sobre el total gastado en ${modo==='q'?'la quincena':'el mes'}. La línea clara en cada barra es el promedio de ${modo==='q'?'las quincenas':'los meses'} anteriores.</p>
   <div class="spacer"></div>
   ${(()=>{if(H().length<2)return '';
     const cz=cierres[claveCierre()],hecho=!!(cz&&cz.saldado),cc=cuentas();
@@ -970,7 +970,6 @@ function render(){
     else { copiarEnl(url) }});
   scr.querySelectorAll('[data-copiar]').forEach(b=>b.onclick=()=>copiarEnl(INV&&INV.url));
   scr.querySelectorAll('[data-otroenl]').forEach(b=>b.onclick=()=>{INV=null;render()});
-  scr.querySelectorAll('[data-vtodo]').forEach(b=>b.onclick=()=>{vTodo=!vTodo;render()});
   scr.querySelectorAll('[data-meta0]').forEach(b=>b.onclick=async()=>{
     b.disabled=true;CFG={...CFG,meta:+b.dataset.meta0};
     if(db){try{await db.collection('config').doc('hogar').set(CFG)}catch(e){}}
