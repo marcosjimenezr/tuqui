@@ -91,7 +91,8 @@ function qHoy(){const d=new Date();return MES[d.getMonth()]+' '+(d.getDate()<=15
 let modo='q', i=Math.max(Q.indexOf(qHoy()),0), view='home', det=null, db=null,
     nuevos=[], overrides={}, editKey=null, lastKey='', amt='', cat=null, por='', nota='',
     AJ=null, vig='desde', cob=1, fon='', fondOv={}, NF=null, NM=null, conceptos={},
-    catOpen=false, detOpen=false, ultimo=null, cierres={}, vTodo=false, INV=null;
+    catOpen=false, detOpen=false, ultimo=null, cierres={}, vTodo=false, INV=null,
+    perBack='home';
 
 const U=()=>modo==='q'?Q:MES;
 const qIdx=()=>modo==='q'?i:2*i+1;
@@ -216,16 +217,17 @@ function diasRest(){const d=new Date(),dia=d.getDate(),
   return Math.max(fin-dia+1,0)}
 function cabecera(){return `<div class="hdr">
   <span class="hn">${esc(CFG.nombre||'Mi hogar')}</span>
-  ${(view==='home'||view==='mov'||view==='an')&&!enHoy()?'<button class="hoyb" data-hoy="1">Hoy</button>':''}
   <button class="hg" data-go2="cfg" aria-label="Ajustes">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
       stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round">
     <path d="M10.20 2.16 L13.80 2.16 L14.09 4.59 L15.76 5.28 L17.69 3.77 L20.23 6.31 L18.72 8.24 L19.41 9.91 L21.84 10.20 L21.84 13.80 L19.41 14.09 L18.72 15.76 L20.23 17.69 L17.69 20.23 L15.76 18.72 L14.09 19.41 L13.80 21.84 L10.20 21.84 L9.91 19.41 L8.24 18.72 L6.31 20.23 L3.77 17.69 L5.28 15.76 L4.59 14.09 L2.16 13.80 L2.16 10.20 L4.59 9.91 L5.28 8.24 L3.77 6.31 L6.31 3.77 L8.24 5.28 L9.91 4.59 Z"/><circle cx="12" cy="12" r="3.4"/></svg>
   </button></div>`}
+// El encabezado dice donde estas. Para moverse hay un solo boton, y la vuelta
+// a hoy solo aparece cuando de verdad te saliste del periodo actual.
 function barra(){const[a,b]=lbl(i);return cabecera()+`<div class="top">
-  <button class="step" data-mv="-1" ${i===0?'disabled':''}>‹</button>
   <span class="who"><b>${a}${enHoy()?'<i class="hoy">hoy</i>':''}</b><span>${b}</span></span>
-  <button class="step" data-mv="1" ${i===U().length-1?'disabled':''}>›</button></div>`}
+  <button class="camb" data-go2="per">Cambiar</button></div>
+  ${enHoy()?'':`<button class="volver" data-hoy="1">‹ Volver a ${perNom(iHoy())}</button>`}`}
 function segModo(){return `<div class="seg" style="margin-top:12px">
   <button data-modo="q" class="${modo==='q'?'on':''}">Por quincena</button>
   <button data-modo="m" class="${modo==='m'?'on':''}">Por mes</button></div>`}
@@ -251,6 +253,28 @@ function catList(){
   const ps=pcts(list.map(x=>x.v));
   list.forEach((x,k)=>x.pc=ps[k]);
   return {list,mx}}
+
+// Selector de periodo: solo los que tienen gastos, mas el actual, del mas
+// nuevo al mas viejo, con cuanto fue cada uno antes de entrar.
+function vPer(){
+  const act=iHoy(), hay={};
+  todos().forEach(g=>{const k=Q.indexOf(g.q); if(k<0)return;
+    hay[modo==='q'?k:Math.floor(k/2)]=1});
+  hay[act]=1; hay[i]=1;
+  const ks=Object.keys(hay).map(Number).sort((x,y)=>y-x);
+  return topSimple('Ver otro periodo','elige cu&aacute;l quieres mirar',perBack)+`
+  <div class="seg"><button data-modo="q" class="${modo==='q'?'on':''}">Por quincena</button>
+    <button data-modo="m" class="${modo==='m'?'on':''}">Por mes</button></div>
+  ${ks.map(k=>{const t=tot(k), n=items(k).length,
+      cz=cierres[claveDe(modo,k)], cerrado=!!(cz&&cz.saldado);
+    return `<button class="row perr${k===i?' sel':''}" data-ver="${k}">
+      <span class="tx"><b>${cap(perNom(k))}</b><span>${
+        t?fmt(t)+' \u00b7 '+n+(n===1?' movimiento':' movimientos'):'sin movimientos'}</span></span>
+      ${k===act?'<em class="et hoy2">hoy</em>'
+        :cerrado?`<em class="et">${modo==='q'?'cerrada':'cerrado'}</em>`:''}</button>`}).join('')}
+  <p class="hint">Solo aparecen ${modo==='q'?'las quincenas':'los meses'} donde ya registraron algo,
+  m&aacute;s ${modo==='q'?'la quincena':'el mes'} de hoy.</p>
+  <div class="spacer"></div>`}
 
 function vDescubrir(){
   const t=tot(i),n=items(i).length,prev=qsConDatos(),sg=sugInicial();
@@ -444,7 +468,8 @@ function quienPago(g){
   if(g.cpor){const m=hs.find(p=>p.u===g.cpor); if(m) return m.id}
   return hs[0]?hs[0].id:'';
 }
-const claveCierre=()=>modo+'|'+(modo==='q'?Q[i]:MES[i]);
+const claveDe=(m,k)=>m+'|'+(m==='q'?Q[k]:MES[k]);
+const claveCierre=()=>claveDe(modo,i);
 function entregado(){const c=cierres[claveCierre()];return (c&&c.ap)||{}}
 
 // Lo pactado es un presupuesto y una proporcion, no una plata que alguien recoge.
@@ -557,10 +582,10 @@ function vCierre(){
 
 function vAn(){
   const t=tot(i),ap=Math.max(APORTE()-prov(i),0);
-  if(!t)return barra()+segModo()+'<p class="hint">Registra algunos gastos y aquí aparece la lectura del periodo.</p><div class="spacer"></div>';
+  if(!t)return barra()+'<p class="hint">Registra algunos gastos y aquí aparece la lectura del periodo.</p><div class="spacer"></div>';
   const gaps=CATS.map(c=>({c,v:costo(i,c.id),p:prom(c.id)})).filter(x=>x.p>0).map(x=>({...x,d:x.v-x.p})).sort((a,b)=>b.d-a.d);
   const peor=gaps[0],cub=cubiertos();
-  return barra()+segModo()+`
+  return barra()+`
   ${!hayMeta()?'':t>ap?`<div class="ins"><h4>${modo==='q'?'Esta quincena':'Este mes'} no alcanzó</h4>
     <p>Gastaron <span class="a">${fmt(t)}</span> contra ${fmt(ap)} disponibles. Faltaron <b>${fmt(t-ap)}</b>.</p></div>`
    :`<div class="ins good"><h4>Van dentro de la meta</h4><p>Gastaron ${fmt(t)} y quedan <span class="a">${fmt(ap-t)}</span>.</p></div>`}
@@ -624,8 +649,10 @@ function repAplica(){
 const sumaPcs=()=>(AJ.hogar||[]).reduce((a,p)=>a+(+AJ.pcs[p.id]||0),0);
 
 // Nombre legible del periodo donde esta parado el usuario.
-function perNom(){if(modo==='m')return MES[i].toLowerCase();
-  const p=Q[i].split(' ');return p[0].toLowerCase()+', '+(p[1]==='1'?'1&ordf;':'2&ordf;')+' quincena'}
+function perNom(k){if(k===undefined)k=i;
+  if(modo==='m')return MES[k].toLowerCase();
+  const p=Q[k].split(' ');return p[0].toLowerCase()+', '+(p[1]==='1'?'1&ordf;':'2&ordf;')+' quincena'}
+const cap=t=>t.charAt(0).toUpperCase()+t.slice(1);
 // Reparto acordado, leido como 50/50.
 function pcTxt(){const hs=CFG.hogar||[],sp=hs.reduce((a,p)=>a+(+p.pct||0),0);
   if(hs.length<2||sp<=0)return '';
@@ -900,7 +927,7 @@ function render(){
   if(view==='aj'&&!AJ)AJ={...CFG,hogar:H().map(x=>({...x}))};
   scr.innerHTML=(avisoInv?`<div class="ins"><h4>No pudimos unirte a ese hogar</h4>
       <p>${esc(avisoInv)}</p><button class="btn sec2" data-okaviso="1">Entendido</button></div>`:'')
-    +(view==='inv'?vInvitar():view==='cierre'?vCierre():view==='cfg'?vConfig():view==='cats'?vCats():view==='apr'?vAprend():view==='fon'?vFondos():view==='aj'?vAjustes():view==='edit'?vEdit():det?vDet():view==='home'?vHome():view==='reg'?vReg():view==='mov'?vMov():vAn())
+    +(view==='inv'?vInvitar():view==='cierre'?vCierre():view==='cfg'?vConfig():view==='per'?vPer():view==='cats'?vCats():view==='apr'?vAprend():view==='fon'?vFondos():view==='aj'?vAjustes():view==='edit'?vEdit():det?vDet():view==='home'?vHome():view==='reg'?vReg():view==='mov'?vMov():vAn())
     +`<div class="sync ${db?'':'warn'}">${db?'Guardado en tu cuenta':'Sin conexión — no se está guardando'}</div>`;
   if(view==='reg'||view==='edit'){const n=document.getElementById('nota');if(n){
     n.oninput=e=>{nota=e.target.value;pintaSug()};
@@ -953,6 +980,8 @@ function render(){
     amt=String(e.med);cat=e.cat;nota=e.n;cob=1;fon='';por='';
     catOpen=false;detOpen=false;ultimo=null;view='reg';det=null;render()});
   scr.querySelectorAll('[data-mv]').forEach(b=>b.onclick=()=>{i+=+b.dataset.mv;det=null;render()});
+  scr.querySelectorAll('[data-ver]').forEach(b=>b.onclick=()=>{
+    i=+b.dataset.ver;det=null;view=perBack;render()});
   scr.querySelectorAll('[data-hoy]').forEach(b=>b.onclick=()=>{i=iHoy();det=null;render()});
   scr.querySelectorAll('[data-modo]').forEach(b=>b.onclick=()=>setModo(b.dataset.modo));
   scr.querySelectorAll('[data-cat]').forEach(b=>b.onclick=()=>{det=b.dataset.cat;render()});
@@ -960,6 +989,7 @@ function render(){
   scr.querySelectorAll('[data-go2]').forEach(b=>b.onclick=()=>{
     if(b.dataset.go2==='aj'){AJ={...CFG,hogar:H().map(x=>({...x}))};vig='desde'}
     if(b.dataset.go2==='fon'){NF={n:'',c:0};NM={n:'',meta:0,mes:0}}
+    if(b.dataset.go2==='per'){perBack=(view==='mov'||view==='an')?view:'home'}
     if(b.dataset.go2==='reg'){amt='';cat=null;nota='';cob=1;fon='';por='';catOpen=false;detOpen=false;ultimo=null}
     view=b.dataset.go2;det=null;render()});
   scr.querySelectorAll('[data-ph]').forEach(el=>el.oninput=e=>{

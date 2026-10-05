@@ -377,3 +377,18 @@ html,body{max-width:100%;overflow-x:hidden}
 /* porcentaje del periodo, al lado del nombre de la categoria */
 .row .tx b .pc{font-style:normal;font-family:"Inter Tight",sans-serif;font-size:12px;
   font-weight:600;color:var(--faint);margin-left:8px;letter-spacing:-.01em}
+
+/* ---------- barra de periodo y selector ---------- */
+.top .camb{flex:none;background:var(--surf);border:none;border-radius:99px;padding:9px 15px;
+  font-family:Inter,sans-serif;font-size:13px;font-weight:600;color:var(--ink);cursor:pointer}
+.top .camb:active{background:var(--surf3)}
+.volver{display:block;width:100%;text-align:left;background:none;border:none;padding:0 2px 2px;
+  margin:-2px 0 6px;font-family:Inter,sans-serif;font-size:13px;font-weight:600;
+  color:var(--brand);cursor:pointer}
+.row.perr{padding:13px 2px;align-items:center}
+.row.perr .tx b{font-size:16px}
+.row.perr.sel .tx b{color:var(--brand)}
+.row.perr .et{font-style:normal;flex:none;font-size:11px;font-weight:600;border-radius:99px;
+  padding:4px 9px;background:var(--surf);color:var(--mute)}
+.row.perr .et.hoy2{background:var(--good-dim);color:var(--good);
+  text-transform:uppercase;letter-spacing:.06em;font-size:9px;font-weight:700}
