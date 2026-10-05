@@ -79,7 +79,7 @@ function todos(){const out=[];
       a:ov.a!==undefined?ov.a:g.a*1000,por:ov.por||0,cob:ov.cob!==undefined?ov.cob:(g.cob||1),
       fon:ov.fon!==undefined?ov.fon:(g.fon||''),
       seed:1,edit:!!ov.cat||ov.n!==undefined||ov.a!==undefined})});
-  nuevos.forEach(g=>out.push({k:g.id,q:g.q,cat:norCat(g.cat),n:g.n,a:g.a,por:g.por||0,cob:g.cob||1,fon:g.fon||'',id:g.id,cpor:g.cpor||''}));
+  nuevos.forEach(g=>out.push({k:g.id,q:g.q,cat:norCat(g.cat),n:g.n,a:g.a,por:g.por||0,cob:g.cob||1,fon:g.fon||'',id:g.id,cpor:g.cpor||'',ce:g.ce||g.at||''}));
   return out}
 const qi=g=>Q.indexOf(g.q);
 const per=g=>(g.cob&&g.cob>1)?g.cob*2:1;
@@ -286,13 +286,26 @@ function vHome(){
       :p?esc(p.de)+' le transfiere '+fmtK(p.v)+' a '+esc(p.a):'nadie le debe nada a nadie'}</span></span>
     <span class="amt" style="font-size:13px;color:var(--brand);font-weight:500">${hecho?'Ver':'Abrir'}</span></button></div>`})()}`}
 
-function fila(g,sub){const an=g.cob>1,rc=recMap()[clave(g.n)];
+// Fecha en que se registro el gasto, en corto: hoy, ayer, o "4 oct".
+const MESC=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+const tsReg=g=>g.ce?(Date.parse(g.ce)||0):8.64e15;   // lo que aun no llega del servidor va arriba
+function fechaReg(iso){
+  if(!iso)return '';
+  const d=new Date(iso); if(isNaN(d.getTime()))return '';
+  const dia=x=>new Date(x.getFullYear(),x.getMonth(),x.getDate()).getTime();
+  const h=new Date(), dif=Math.round((dia(h)-dia(d))/86400000);
+  if(dif===0)return 'hoy';
+  if(dif===1)return 'ayer';
+  const t=d.getDate()+' '+MESC[d.getMonth()];
+  return d.getFullYear()===h.getFullYear()?t:t+' '+d.getFullYear()}
+
+function fila(g,sub,fecha){const an=g.cob>1,rc=recMap()[clave(g.n)];
   return `<button class="row" data-edit="${g.k}">
   <span class="ic" style="background:${CM[g.cat].c}">${CM[g.cat].n[0]}</span>
   <span class="tx"><b>${esc(g.n)}${an?`<span class="tag an">${g.cob} meses</span>`:''}${
     !an&&rc?`<span class="tag rc">\u21bb ${cadaTxt(rc.cada)}</span>`:''}</b>
   <span>${an?fmt(g.a/per(g))+' por quincena · cubre hasta '+hastaQ(g).toLowerCase():sub}</span></span>
-  <span class="amt">${fmt(g.a)}</span></button>`}
+  <span class="amt">${fmt(g.a)}${fecha?`<em>${fecha}</em>`:''}</span></button>`}
 
 function vDet(){
   const c=CM[det],its=items(i).filter(g=>g.cat===det).sort((a,b)=>b.a-a.a),
@@ -303,9 +316,10 @@ function vDet(){
     </div><div class="spacer"></div>`}
 
 function vMov(){
-  const its=items(i).slice().sort((a,b)=>b.a-a.a);
+  // En orden de ingreso, lo ultimo que registraron primero.
+  const its=items(i).slice().sort((a,b)=>tsReg(b)-tsReg(a));
   return barra()+`<div class="sec"><b>${its.length} movimientos</b><span>${fmt(tot(i))}</span></div>
-  ${its.length?its.map(g=>fila(g,CM[g.cat].n+(modo==='m'?' · '+g.q.split(' ')[1]+'ª q':'')+(g.id&&nomPor(g.por)?' · '+nomPor(g.por):''))).join(''):'<p class="hint">Sin movimientos en este periodo.</p>'}
+  ${its.length?its.map(g=>fila(g,CM[g.cat].n+(modo==='m'?' · '+g.q.split(' ')[1]+'ª q':'')+(g.id&&nomPor(g.por)?' · '+nomPor(g.por):''),fechaReg(g.ce))).join(''):'<p class="hint">Sin movimientos en este periodo.</p>'}
   <p class="hint">Toca cualquier gasto para corregirle el monto, el nombre o la categoría. También los del histórico.</p>
   <div class="spacer"></div>`}
 
@@ -1304,7 +1318,7 @@ async function cargar(){
 
   nuevos = (ex.data||[]).map(r => ({ id:r.id, q:r.q, cat:r.cat, n:r.nombre, a:+r.monto,
             cob:+r.cobertura||1, fon:r.fund_id||'', por:r.pagado_por||'',
-            cpor:r.creado_por||'' }));
+            cpor:r.creado_por||'', ce:r.creado_en||'' }));
   overrides = {};
 
   fondOv = {}; (fu.data||[]).forEach(r => { fondOv[r.id] =
