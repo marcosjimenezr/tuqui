@@ -295,7 +295,7 @@ function vHome(){
     <span class="ic" style="${icSt(x.c.id)}">${x.c.n[0]}</span>
     <span class="tx"><b>${x.c.n}<i class="pc">${x.pc}%</i></b>
       <span class="mini-bar"><i style="width:${x.v/mx*100}%;background:${x.c.c}"></i>${x.p?`<u style="left:calc(${Math.min(x.p/mx*100,99)}% - 1px)"></u>`:''}</span></span>
-    <span class="amt">${fmtK(x.v)}${x.p?`<em>${x.v>x.p?'+':''}${fmtK(x.v-x.p)}</em>`:''}</span></button>`).join('')
+    <span class="amt">${fmtK(x.v)}</span></button>`).join('')
    :'<p class="hint">Todavía no hay gastos en este periodo.</p>'}
   <p class="hint">El porcentaje es sobre el total gastado en ${modo==='q'?'la quincena':'el mes'}${!vTodo&&list.length>4?' — aquí ves solo las 4 más grandes, por eso no suman 100':''}. La línea clara en cada barra es el promedio de ${modo==='q'?'las quincenas':'los meses'} anteriores.</p>
   <div class="spacer"></div>
@@ -334,7 +334,11 @@ function vDet(){
   const c=CM[det],its=items(i).filter(g=>g.cat===det).sort((a,b)=>b.a-a.a),
         t=its.reduce((s,g)=>s+g.a,0),p=prom(det);
   return barra()+`<div class="det"><button class="back" data-back="1">‹ Volver</button>
-    <h3>${c.n}</h3><div class="sum">${fmt(t)} · ${its.length} ${its.length===1?'apunte':'apuntes'}${p?' · promedio '+fmt(p):''}</div>
+    <h3>${c.n}</h3><div class="sum">${fmt(t)} · ${its.length} ${its.length===1?'apunte':'apuntes'}</div>
+    ${p?`<p class="hint" style="margin:7px 2px 4px">${
+      t>p?'<b>'+fmt(t-p)+'</b> más de lo que suelen gastar aquí'
+     :t<p?'<b>'+fmt(p-t)+'</b> menos de lo que suelen gastar aquí'
+     :'Van justo en su promedio'} · promedio ${fmt(p)}.</p>`:''}
     ${its.map(g=>fila(g,modo==='m'?g.q.split(' ')[1]+'ª quincena':(g.id&&nomPor(g.por)?nomPor(g.por):'&nbsp;'))).join('')}
     </div><div class="spacer"></div>`}
 
