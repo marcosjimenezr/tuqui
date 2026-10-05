@@ -201,8 +201,9 @@ function cabecera(){return `<div class="hdr">
   <span class="hn">${esc(CFG.nombre||'Mi hogar')}</span>
   ${(view==='home'||view==='mov'||view==='an')&&!enHoy()?'<button class="hoyb" data-hoy="1">Hoy</button>':''}
   <button class="hg" data-go2="cfg" aria-label="Ajustes">
-    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round">
-    <circle cx="12" cy="12" r="3.3"/><path d="M12 3.5v2M12 18.5v2M3.5 12h2M18.5 12h2M6 6l1.4 1.4M16.6 16.6 18 18M18 6l-1.4 1.4M7.4 16.6 6 18"/></svg>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M10.20 2.16 L13.80 2.16 L14.09 4.59 L15.76 5.28 L17.69 3.77 L20.23 6.31 L18.72 8.24 L19.41 9.91 L21.84 10.20 L21.84 13.80 L19.41 14.09 L18.72 15.76 L20.23 17.69 L17.69 20.23 L15.76 18.72 L14.09 19.41 L13.80 21.84 L10.20 21.84 L9.91 19.41 L8.24 18.72 L6.31 20.23 L3.77 17.69 L5.28 15.76 L4.59 14.09 L2.16 13.80 L2.16 10.20 L4.59 9.91 L5.28 8.24 L3.77 6.31 L6.31 3.77 L8.24 5.28 L9.91 4.59 Z"/><circle cx="12" cy="12" r="3.4"/></svg>
   </button></div>`}
 function barra(){const[a,b]=lbl(i);return cabecera()+`<div class="top">
   <button class="step" data-mv="-1" ${i===0?'disabled':''}>‹</button>
