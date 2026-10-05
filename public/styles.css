@@ -373,3 +373,7 @@ html,body{max-width:100%;overflow-x:hidden}
 .hdr .hoyb,.hdr .hg,.step{background:var(--surf)}
 .hdr .hoyb:active,.hdr .hg:active,.step:active{background:var(--surf3)}
 .tab.on{color:var(--brand)}
+
+/* porcentaje del periodo, al lado del nombre de la categoria */
+.row .tx b .pc{font-style:normal;font-family:"Inter Tight",sans-serif;font-size:12px;
+  font-weight:600;color:var(--faint);margin-left:8px;letter-spacing:-.01em}

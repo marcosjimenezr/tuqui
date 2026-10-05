@@ -216,9 +216,22 @@ function topSimple(t,s,back){return `<div class="top">
   <span class="who" style="text-align:center"><b>${t}</b><span>${s}</span></span>
   <span style="width:34px"></span></div>`}
 
+// Reparte 100 puntos sin que se pierda ninguno en el redondeo: el sobrante va
+// a las categorias con el resto mas grande. Asi la columna suma 100% exacto.
+function pcts(vals){
+  const t=vals.reduce((a,b)=>a+b,0);
+  if(t<=0)return vals.map(()=>0);
+  const ex=vals.map(v=>v/t*100), fl=ex.map(Math.floor);
+  const falta=Math.max(100-fl.reduce((a,b)=>a+b,0),0);
+  ex.map((v,k)=>({k,r:v-Math.floor(v)})).sort((a,b)=>b.r-a.r)
+    .slice(0,falta).forEach(o=>fl[o.k]++);
+  return fl}
+
 function catList(){
   const list=CATS.map(c=>({c,v:catTot(i,c.id),p:prom(c.id)})).filter(x=>x.v>0).sort((a,b)=>b.v-a.v);
   const mx=Math.max(...list.map(x=>Math.max(x.v,x.p)),1);
+  const ps=pcts(list.map(x=>x.v));
+  list.forEach((x,k)=>x.pc=ps[k]);
   return {list,mx}}
 
 function vDescubrir(){
@@ -243,7 +256,7 @@ function vDescubrir(){
   ${list.length?`<div class="sec"><b>En qu\u00e9 se ha ido</b></div>
   ${list.map(x=>`<button class="row" data-cat="${x.c.id}">
     <span class="ic" style="${icSt(x.c.id)}">${x.c.n[0]}</span>
-    <span class="tx"><b>${x.c.n}</b><span class="bar"><i style="width:${x.v/mx*100}%;background:${x.c.c}"></i></span></span>
+    <span class="tx"><b>${x.c.n}<i class="pc">${x.pc}%</i></b><span class="bar"><i style="width:${x.v/mx*100}%;background:${x.c.c}"></i></span></span>
     <span class="amt">${fmtK(x.v)}</span></button>`).join('')}`:''}
   <div class="spacer"></div>`}
 
@@ -252,8 +265,7 @@ function vHome(){
   const t=tot(i),ap=APORTE(),
         pv=prov(i),disp=Math.max(ap-pv,0),tl=totLibre(i),tf=totFondo(i),
         over=tl>disp,esc2=Math.max(disp,tl)*1.06||1;
-  const list=CATS.map(c=>({c,v:catTot(i,c.id),p:prom(c.id)})).filter(x=>x.v>0).sort((a,b)=>b.v-a.v);
-  const mx=Math.max(...list.map(x=>Math.max(x.v,x.p)),1);
+  const {list,mx}=catList();
   return barra()+`
   <div class="hero ${over?'over':'ok'}">
     <div class="lb">${over?'Se pasaron por':'Les queda'}</div>
@@ -281,11 +293,11 @@ function vHome(){
   <div class="sec"><b>Por categoría</b>${list.length>4?`<button class="lnk" data-vtodo="1">${vTodo?'ver menos':'ver todas ('+list.length+')'}</button>`:'<span>vs. su promedio</span>'}</div>
   ${list.length?(vTodo?list:list.slice(0,4)).map(x=>`<button class="row" data-cat="${x.c.id}">
     <span class="ic" style="${icSt(x.c.id)}">${x.c.n[0]}</span>
-    <span class="tx"><b>${x.c.n}</b>
+    <span class="tx"><b>${x.c.n}<i class="pc">${x.pc}%</i></b>
       <span class="mini-bar"><i style="width:${x.v/mx*100}%;background:${x.c.c}"></i>${x.p?`<u style="left:calc(${Math.min(x.p/mx*100,99)}% - 1px)"></u>`:''}</span></span>
     <span class="amt">${fmtK(x.v)}${x.p?`<em>${x.v>x.p?'+':''}${fmtK(x.v-x.p)}</em>`:''}</span></button>`).join('')
    :'<p class="hint">Todavía no hay gastos en este periodo.</p>'}
-  <p class="hint">La línea clara en cada barra es el promedio de ${modo==='q'?'las quincenas':'los meses'} anteriores.</p>
+  <p class="hint">El porcentaje es sobre el total gastado en ${modo==='q'?'la quincena':'el mes'}${!vTodo&&list.length>4?' — aquí ves solo las 4 más grandes, por eso no suman 100':''}. La línea clara en cada barra es el promedio de ${modo==='q'?'las quincenas':'los meses'} anteriores.</p>
   <div class="spacer"></div>
   ${(()=>{if(H().length<2)return '';
     const cz=cierres[claveCierre()],hecho=!!(cz&&cz.saldado),cc=cuentas();
