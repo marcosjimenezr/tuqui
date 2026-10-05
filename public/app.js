@@ -4,33 +4,50 @@ const SEED=[];
 const CATS=[
  // El orden manda: las primeras cinco son las que salen de una al registrar,
  // mientras el hogar no tenga historia propia. Van las del dia a dia primero.
- // c = color de la letra, t = tinte del circulo. Sobre crema un color solido
- // chilla, asi que el circulo es tinte y el color vive en la letra.
- {id:'mercado',n:'Mercado',c:'#3F7A5C',t:'#E2EDE5'},
- {id:'domicilios',n:'Domicilios',c:'#C2622E',t:'#F6E6DA'},
- {id:'comerfuera',n:'Comer fuera',c:'#9A7420',t:'#F2EBD8'},
- {id:'transporte',n:'Transporte',c:'#656B76',t:'#E8E8EA'},
- {id:'hogar',n:'Casa',c:'#55728C',t:'#E3EAEF'},
- {id:'servicios',n:'Servicios',c:'#2F7E79',t:'#DFEEEC'},
- {id:'vivienda',n:'Vivienda',c:'#45689C',t:'#E2E8F2'},
- {id:'ayuda',n:'Ayuda en casa',c:'#73589F',t:'#EAE4F3'},
- {id:'salud',n:'Salud',c:'#AA4545',t:'#F6E3E3'},
- {id:'bienestar',n:'Bienestar',c:'#64802E',t:'#EDF1DD'},
- {id:'educacion',n:'Educación',c:'#5555A6',t:'#E5E5F4'},
- {id:'deudas',n:'Deudas y seguros',c:'#85539F',t:'#EFE4F4'},
- {id:'suscrip',n:'Suscripciones',c:'#357697',t:'#E0ECF2'},
- {id:'mascotas',n:'Mascotas',c:'#8C5D38',t:'#F1E7DC'},
- {id:'regalos',n:'Regalos y celebraciones',c:'#9E6D1A',t:'#F5EDD7'},
- {id:'personal',n:'Personal y ocio',c:'#A94B73',t:'#F7E3EC'}];
+ // c = color, t = tinte del circulo, d = dibujo del icono (viewBox 24, trazo 1.7).
+ {id:'mercado',n:'Mercado',c:'#3F7A5C',t:'#E2EDE5',
+  d:'<path d="M2.6 4h2.2l2.3 10.1a1.7 1.7 0 0 0 1.7 1.3h7.7a1.7 1.7 0 0 0 1.7-1.3L19.6 8H5.6"/><circle cx="9.6" cy="19.4" r="1.4"/><circle cx="16.8" cy="19.4" r="1.4"/>'},
+ {id:'domicilios',n:'Domicilios',c:'#C2622E',t:'#F6E6DA',
+  d:'<circle cx="5.4" cy="16.8" r="3"/><circle cx="18.6" cy="16.8" r="3"/><path d="M8.4 16.8h7.2M15.6 16.8 13.2 7.4h-2.6M13.8 10.6h3.8l1.8 6.2M5.4 13.8v-3.2h4.8"/>'},
+ {id:'comerfuera',n:'Comer fuera',c:'#9A7420',t:'#F2EBD8',
+  d:'<path d="M6.4 3v5.4M9.6 3v5.4M8 8.4V21"/><path d="M16.4 3c1.7 1.4 2.2 3.5 2.2 5.4 0 1.6-.8 2.6-2.2 3V21"/>'},
+ {id:'transporte',n:'Transporte',c:'#656B76',t:'#E8E8EA',
+  d:'<path d="M3.4 15.6h17.2M5 15.6l1.7-5.4A2.1 2.1 0 0 1 8.7 8.7h6.6a2.1 2.1 0 0 1 2 1.5l1.7 5.4"/><circle cx="7.6" cy="17.6" r="1.7"/><circle cx="16.4" cy="17.6" r="1.7"/>'},
+ {id:'hogar',n:'Casa',c:'#55728C',t:'#E3EAEF',
+  d:'<path d="M5.4 11.4V8.2a2.1 2.1 0 0 1 2.1-2.1h9a2.1 2.1 0 0 1 2.1 2.1v3.2"/><path d="M3 14a2.1 2.1 0 0 1 4.2 0v1.8h9.6V14A2.1 2.1 0 0 1 21 14v4.4H3z"/><path d="M5.4 18.4v1.5M18.6 18.4v1.5"/>'},
+ {id:'servicios',n:'Servicios',c:'#2F7E79',t:'#DFEEEC',
+  d:'<path d="M13.4 2.4 5 13.6h5.9l-1 8 8.4-11.2h-5.9z"/>'},
+ {id:'vivienda',n:'Vivienda',c:'#45689C',t:'#E2E8F2',
+  d:'<path d="M3.2 11.2 12 4.2l8.8 7"/><path d="M5.4 10.4v8.7a.9.9 0 0 0 .9.9h11.4a.9.9 0 0 0 .9-.9v-8.7"/>'},
+ {id:'ayuda',n:'Ayuda en casa',c:'#73589F',t:'#EAE4F3',
+  d:'<circle cx="12" cy="7.8" r="3.5"/><path d="M4.9 20c.7-3.7 3.5-5.8 7.1-5.8s6.4 2.1 7.1 5.8"/>'},
+ {id:'salud',n:'Salud',c:'#AA4545',t:'#F6E3E3',
+  d:'<rect x="2.8" y="6.6" width="18.4" height="13.6" rx="2.4"/><path d="M9.2 6.6V5.4A1.3 1.3 0 0 1 10.5 4.1h3a1.3 1.3 0 0 1 1.3 1.3v1.2"/><path d="M12 10.4v6M9 13.4h6"/>'},
+ {id:'bienestar',n:'Bienestar',c:'#64802E',t:'#EDF1DD',
+  d:'<path d="M2.8 9.6v4.8M6.2 7.2v9.6M17.8 7.2v9.6M21.2 9.6v4.8M6.2 12h11.6"/>'},
+ {id:'educacion',n:'Educación',c:'#5555A6',t:'#E5E5F4',
+  d:'<path d="M12 3.6 2.2 8.8 12 14l9.8-5.2z"/><path d="M6.4 11.1v4.7c0 1.9 2.5 3.2 5.6 3.2s5.6-1.3 5.6-3.2v-4.7"/>'},
+ {id:'deudas',n:'Deudas y seguros',c:'#85539F',t:'#EFE4F4',
+  d:'<rect x="2.4" y="5.4" width="19.2" height="13.2" rx="2.3"/><path d="M2.4 10.1h19.2M6 14.6h3.8"/>'},
+ {id:'suscrip',n:'Suscripciones',c:'#357697',t:'#E0ECF2',
+  d:'<path d="M4 10.2A5.2 5.2 0 0 1 9.2 5h8.3"/><path d="m14.9 2.4 2.7 2.6-2.7 2.6"/><path d="M20 13.8A5.2 5.2 0 0 1 14.8 19H6.5"/><path d="m9.1 21.6-2.7-2.6 2.7-2.6"/>'},
+ {id:'mascotas',n:'Mascotas',c:'#8C5D38',t:'#F1E7DC',
+  d:'<ellipse cx="8.2" cy="7.4" rx="1.9" ry="2.6"/><ellipse cx="15.8" cy="7.4" rx="1.9" ry="2.6"/><ellipse cx="4.1" cy="12.6" rx="1.7" ry="2.2"/><ellipse cx="19.9" cy="12.6" rx="1.7" ry="2.2"/><path d="M12 12.6c2.9 0 5.1 2.3 5.1 4.7 0 1.8-1.4 3.1-3.3 3.1-.8 0-1.2-.3-1.8-.3s-1 .3-1.8.3c-1.9 0-3.3-1.3-3.3-3.1 0-2.4 2.2-4.7 5.1-4.7z"/>'},
+ {id:'regalos',n:'Regalos y celebraciones',c:'#9E6D1A',t:'#F5EDD7',
+  d:'<rect x="2.8" y="9.4" width="18.4" height="10.8" rx="1.7"/><path d="M1.8 9.4h20.4M12 9.4v10.8"/><path d="M12 9.4S9.6 9.4 8.3 8.1a2.2 2.2 0 1 1 3.1-3.1C12.5 6.1 12 9.4 12 9.4"/><path d="M12 9.4s2.4 0 3.7-1.3a2.2 2.2 0 1 0-3.1-3.1C11.5 6.1 12 9.4 12 9.4"/>'},
+ {id:'personal',n:'Personal y ocio',c:'#A94B73',t:'#F7E3EC',
+  d:'<path d="M8.6 3.4 4 6.1l1.9 4.2 2.3-1v11.3h7.6V9.3l2.3 1L20 6.1l-4.6-2.7a3.7 3.7 0 0 1-6.8 0z"/>'}];
 // Si alguna vez se fusionan o renombran categorias, aqui se mapea la vieja a la
 // nueva y los gastos ya registrados se leen en la nueva sin tocar la base.
 const ALIAS={};
 // Si algun dia aparece una categoria que ya no existe, cae en Personal y ocio
 // en vez de tumbar la pantalla.
 const norCat=c=>{const k=ALIAS[c]||c;return CM[k]?k:'personal'};
-// Estilo del circulo de categoria: tinte de fondo, color en la letra.
-const icSt=id=>{const c=CM[id]||{c:'#8A8378',t:'#E6E1D8'};
-  return 'background:'+c.t+';color:'+c.c};
+// Circulo de categoria: tinte de fondo e icono en el color de la categoria.
+function icCat(id){const c=CM[norCat(id)]||{c:'#8A8378',t:'#E6E1D8',d:''};
+  return '<span class="ic" style="background:'+c.t+';color:'+c.c+'">'+
+    '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" '+
+    'stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">'+(c.d||'')+'</svg></span>'}
 const CM=Object.fromEntries(CATS.map(c=>[c.id,c]));
 // El acuerdo de que va en cada categoria. Se usa en la pantalla de ayuda y traza a
 // proposito las rayas donde hoy se confunden: Salud vs Bienestar, Vivienda vs Casa.
@@ -256,7 +273,7 @@ function vDescubrir(){
     <p>Llevan <b>${prev.length}</b> ${prev.length===1?'quincena cerrada':'quincenas cerradas'} con gastos.</p></div>`}
   ${list.length?`<div class="sec"><b>En qu\u00e9 se ha ido</b></div>
   ${list.map(x=>`<button class="row" data-cat="${x.c.id}">
-    <span class="ic" style="${icSt(x.c.id)}">${x.c.n[0]}</span>
+    ${icCat(x.c.id)}
     <span class="tx"><b>${x.c.n}<i class="pc">${x.pc}%</i></b><span class="bar"><i style="width:${x.v/mx*100}%;background:${x.c.c}"></i></span></span>
     <span class="amt">${fmtK(x.v)}</span></button>`).join('')}`:''}
   <div class="spacer"></div>`}
@@ -287,13 +304,13 @@ function vHome(){
     const sp=pd.reduce((a,e)=>a+e.med,0);
     return `<div class="sec"><b>Todavía no ha llegado</b><span>${fmt(sp)} aprox.</span></div>
     ${pd.map(e=>`<button class="row pend" data-pend="${esc(e.k)}">
-      <span class="ic" style="${icSt(e.cat)}">${(CM[e.cat]||{n:'?'}).n[0]}</span>
+      ${icCat(e.cat)}
       <span class="tx"><b>${esc(e.n)}</b><span>${cadaTxt(e.cada)} · suele ser ${fmt(e.med)}</span></span>
       <span class="amt" style="font-size:13px;color:var(--brand);font-weight:500">Registrar</span></button>`).join('')}
     <p class="hint">Son cosas que ya vienen repitiéndose. Si alguna no aplica este periodo, ignórala — desaparece sola.</p>`})()}
   <div class="sec"><b>Por categoría</b>${list.length>4?`<button class="lnk" data-vtodo="1">${vTodo?'ver menos':'ver todas ('+list.length+')'}</button>`:'<span>vs. su promedio</span>'}</div>
   ${list.length?(vTodo?list:list.slice(0,4)).map(x=>`<button class="row" data-cat="${x.c.id}">
-    <span class="ic" style="${icSt(x.c.id)}">${x.c.n[0]}</span>
+    ${icCat(x.c.id)}
     <span class="tx"><b>${x.c.n}<i class="pc">${x.pc}%</i></b>
       <span class="mini-bar"><i style="width:${x.v/mx*100}%;background:${x.c.c}"></i>${x.p?`<u style="left:calc(${Math.min(x.p/mx*100,99)}% - 1px)"></u>`:''}</span></span>
     <span class="amt">${fmtK(x.v)}</span></button>`).join('')
@@ -325,7 +342,7 @@ function fechaReg(iso){
 
 function fila(g,sub,fecha){const an=g.cob>1,rc=recMap()[clave(g.n)];
   return `<button class="row" data-edit="${g.k}">
-  <span class="ic" style="${icSt(g.cat)}">${CM[g.cat].n[0]}</span>
+  ${icCat(g.cat)}
   <span class="tx"><b>${esc(g.n)}${an?`<span class="tag an">${g.cob} meses</span>`:''}${
     !an&&rc?`<span class="tag rc">\u21bb ${cadaTxt(rc.cada)}</span>`:''}</b>
   <span>${an?fmt(g.a/per(g))+' por quincena · cubre hasta '+hastaQ(g).toLowerCase():sub}</span></span>
@@ -859,7 +876,7 @@ function vCats(){
  Esta es la raya acordada.</p></div>
  ${gs.map(g=>`<span class="glab3">${g.t}</span>
    ${g.ids.map(id=>{const c=CM[id];return c?`<div class="row def">
-     <span class="ic" style="${icSt(id)}">${c.n[0]}</span>
+     ${icCat(id)}
      <span class="tx"><b>${c.n}</b><span>${DEF[id]||''}</span></span></div>`:''}).join('')}`).join('')}
  <p class="hint">Si algo no cuadra en ninguna, va en <b>Personal y ocio</b>.
  Lo importante no es en cu&aacute;l va, sino que siempre vaya en la misma.</p>
