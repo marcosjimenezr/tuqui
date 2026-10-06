@@ -79,6 +79,7 @@ const Q=[];MES.forEach(m=>{Q.push(m+' 1');Q.push(m+' 2')});
 const DEFMETA=2000000;
 let CFG={a1:1250000,a2:1250000,desc:500000,p1:'Mark',p2:'Esposa',meta:DEFMETA};
 let metas=[];
+let movs=[];   // abonos al ahorro: lo unico que hace real un saldo
 const COLP=['#C2622E','#45689C','#3F7A5C','#9E6D1A','#73589F','#2F7E79'];
 function H(){if(CFG.hogar&&CFG.hogar.length)return CFG.hogar;
   return [{id:'p1',n:CFG.p1||'Yo',a:+CFG.a1||0,d:0},
@@ -92,7 +93,7 @@ let modo='q', i=Math.max(Q.indexOf(qHoy()),0), view='home', det=null, db=null,
     nuevos=[], overrides={}, editKey=null, lastKey='', amt='', cat=null, por='', nota='',
     AJ=null, vig='desde', cob=1, fon='', fondOv={}, NF=null, NM=null, conceptos={},
     catOpen=false, detOpen=false, ultimo=null, cierres={}, INV=null,
-    perBack='home';
+    perBack='home', AB={fon:'',a:''};
 
 const U=()=>modo==='q'?Q:MES;
 const qIdx=()=>modo==='q'?i:2*i+1;
@@ -178,10 +179,24 @@ function aporta(f,k){if(!activo(f,k))return 0;const n=plan(f);
   if(n&&(k-Q.indexOf(f.desde)+1)>n)return 0;return +f.c||0}
 const provQ=k=>fondos().reduce((s,f)=>s+aporta(f,k),0);
 const prov=k=>modo==='q'?provQ(k):provQ(2*k)+provQ(2*k+1);
-function saldo(f,k){const a=Q.indexOf(f.desde);if(a<0||k<a)return 0;
-  const n=plan(f);let q=k-a+1;if(n)q=Math.min(q,n);
+// Antes esto multiplicaba quincenas por cuota y daba por hecho que apartaron
+// siempre. Ahora suma lo que de verdad abonaron, menos lo que gastaron de ahi.
+function saldo(f,k){
+  const puesto=movs.filter(m=>m.fon===f.id&&Q.indexOf(m.q)<=k).reduce((s,m)=>s+(+m.a||0),0);
   const usado=todos().filter(g=>g.fon===f.id&&qi(g)<=k).reduce((s,g)=>s+g.a,0);
-  return q*(+f.c||0)-usado}
+  return puesto-usado}
+const juntado=k=>fondos().reduce((s,f)=>s+saldo(f,k),0);
+const abonadoEn=q=>movs.filter(m=>m.q===q).reduce((s,m)=>s+(+m.a||0),0);
+const abonoOrigen=(q,o)=>movs.filter(m=>m.q===q&&m.origen===o).reduce((s,m)=>s+(+m.a||0),0);
+
+// Quincenas seguidas con al menos un abono. La de hoy todavia esta corriendo:
+// si aun no han abonado no rompe la racha, solo no la suma.
+function racha(){
+  const hay={}; movs.forEach(m=>{const k=Q.indexOf(m.q); if(k>=0&&+m.a>0)hay[k]=1});
+  let k=Math.max(Q.indexOf(qHoy()),0), n=0;
+  if(!hay[k])k--;
+  while(k>=0&&hay[k]){n++;k--}
+  return n}
 const esMeta=f=>+f.meta>0;
 function faltanQ(f,k){const n=plan(f);if(!n)return 0;
   return Math.max(n-(k-Q.indexOf(f.desde)+1),0)}
@@ -574,6 +589,27 @@ function vCierre(){
       ?`Hab\u00edan pactado ${fmt(pactTot)} y gastaron ${fmt(total)}. Esa plata no hizo falta ponerla.`
       :`Hab\u00edan pactado ${fmt(pactTot)} y gastaron ${fmt(total)}. Si se repite, toca subir la cuota o recortar.`}</p></div>
 
+  ${(()=>{const fs=fondos(); if(!fs.length)return '';
+    const qq=Q[qIdx()], dest=AB.fon||fs[0].id, dn=(fs.find(f=>f.id===dest)||fs[0]).n,
+          comp=prov(i), yaC=abonoOrigen(qq,'compromiso'), yaS=abonoOrigen(qq,'sobrante'), rc=racha();
+    const pick=fs.length>1?`<div class="pills" style="margin:11px 0 2px">${fs.map(f=>
+      `<button class="pill ${dest===f.id?'sel':''}" data-abf="${f.id}">${esc(f.n)}</button>`).join('')}</div>`:'';
+    let out=`<div class="sec"><b>Ahorro</b><span>${esc(dn)}</span></div>`;
+    if(comp>0) out += yaC>0
+      ? `<div class="ins good"><h4>Apartaron ${fmt(yaC)} de lo comprometido</h4>
+         <p>${rc} ${rc===1?'quincena':'quincenas'} seguidas sin fallar.</p></div>`
+      : `<div class="ins"><h4>\u00bfApartaron los ${fmt(comp)} comprometidos?</h4>
+         <p>Es lo que acordaron apartar cada ${et}. Marcarlo aqu\u00ed es lo que sostiene la racha.</p>
+         ${pick}<button class="btn" data-abcomp="${Math.round(comp)}">S\u00ed, los apartamos</button></div>`;
+    if(sobra>500) out += yaS>0
+      ? `<div class="ins good"><h4>Llevaron ${fmt(yaS)} del sobrante al ahorro</h4>
+         <p>Ese sobrante dej\u00f3 de ser un n\u00famero y qued\u00f3 guardado.</p></div>`
+      : `<div class="ins"><h4>Sobraron ${fmt(sobra)}. \u00bfLlevan algo al ahorro?</h4>
+         <p>Esa plata no est\u00e1 junta en ning\u00fan lado \u2014 cada uno simplemente gast\u00f3 menos de lo suyo.
+         Para apartarla, a cada uno le toca transferir ${gente.map(x=>esc(x.n)+' '+fmt(sobra*x.pct)).join(' \u00b7 ')}.</p>
+         ${comp>0?'':pick}<button class="btn" data-absob="${Math.round(sobra)}">S\u00ed, lo apartamos</button></div>`;
+    return out})()}
+
   ${firme?'':'<button class="btn" data-cerrar="1">Marcar como saldado</button>'}
   <p class="hint">Se toma como pagador a quien registr\u00f3 cada gasto; si lo pag\u00f3 el otro, c\u00e1mbialo en
    Movimientos antes de cerrar. Lo que sale de un fondo no entra en el cruce.</p>
@@ -769,18 +805,30 @@ function tarjetaFondo(f,k){const sd=saldo(f,k);
    <div class="fl">cuota por quincena \u00b7 apartando desde ${f.desde.toLowerCase()}</div>
  </div>`}
 
-function vFondos(){const k=qIdx(),fs=fondos(),
+function vAhorro(){const k=qIdx(),fs=fondos(),
   mt=fs.filter(esMeta),fd=fs.filter(f=>!esMeta(f)),
   tc=fs.reduce((s,f)=>s+aporta(f,k),0),
   ts=fs.reduce((s,f)=>s+saldo(f,k),0),
   nq=NM&&NM.mes?NM.mes*2:0,
   cuota=nq&&NM.meta?Math.ceil(NM.meta/nq/10000)*10000:0;
- return topSimple('Fondos y metas','plata que apartan cada quincena','cfg')+`
- <div class="goal"><div class="l">Apartan por quincena</div><div class="v">${fmt(tc)}</div>
-   <div class="d">saldo acumulado hoy ${fmt(ts)}</div></div>
- <div class="ins" style="margin-top:16px"><h4>Ojo con esto</h4>
-   <p>TUQUI no mueve la plata. Para que esto sirva, ese saldo deber\u00eda estar en otra cuenta o en un
-   bolsillo aparte \u2014 si se queda en la cuenta del diario, se gasta y queda en el papel.</p></div>
+ const rc=racha();
+ return cabecera()+`
+ <div class="hero">
+   <div class="lb">Han juntado</div>
+   <div class="big">${fmt(ts)}</div>
+   <div class="cmp">${fs.length?'en <b>'+fs.length+'</b> '+(fs.length===1?'meta':'metas')+' \u00b7 comprometen <b>'+fmt(tc)+'</b> por quincena':'todav\u00eda no hay nada apartado'}</div>
+ </div>
+ ${rc?`<div class="racha"><span class="ric">
+   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.6c2.6 3.4 6.4 5.1 6.4 9.5a6.4 6.4 0 1 1-12.8 0c0-1.6.6-2.9 1.5-4.2.5 1 1.2 1.6 2 1.9.3-3 1.3-5.3 2.9-7.2z"/></svg></span>
+   <span><b>${rc} ${rc===1?'quincena':'quincenas'} seguidas</b><span>sin saltarse ninguna</span></span></div>`:''}
+
+ ${fs.length?`<div class="sec"><b>Abonar</b><span>lo que ya apartaron</span></div>
+ <div class="pills">${fs.map(f=>`<button class="pill ${AB.fon===f.id?'sel':''}" data-abf="${f.id}">${esc(f.n)}</button>`).join('')}</div>
+ <div class="amtw" style="padding:14px 0 2px"><span class="cur">$</span>
+   <input class="amtin" id="abm" inputmode="numeric" placeholder="0" value="${AB.a?(+AB.a).toLocaleString('es-CO'):''}"></div>
+ <button class="btn" data-abok="1" ${AB.fon&&+AB.a>0?'':'disabled'}>Abonar</button>
+ <p class="hint">TUQUI no mueve la plata: ustedes la transfieren y aqu\u00ed queda el registro.
+ Por eso este saldo solo crece cuando lo abonan de verdad.</p>`:''}
 
  <div class="sec"><b>Lo que quieren</b><span>monto y plazo</span></div>
  ${mt.length?mt.map(f=>tarjetaFondo(f,k)).join('')
@@ -819,6 +867,15 @@ function vFondos(){const k=qIdx(),fs=fondos(),
 async function guardaFondo(id,c){const f=fondos().find(x=>x.id===id);if(!f)return;
   const o={id,n:f.n,c:+c||0,desde:f.desde,d:f.d||'',meta:f.meta||0,hasta:f.hasta||''};fondOv[id]=o;
   if(db){try{await db.collection('fondos').doc(id).set(o)}catch(e){}}}
+// Un abono es un hecho con fecha: por eso el saldo se puede creer.
+async function abonar(fon,monto,q,origen){
+  if(!fon||!(+monto>0))return;
+  const id=uid4(), m={id,fon,q:q||Q[Math.max(Q.indexOf(qHoy()),0)],
+                      a:Math.round(+monto),origen:origen||'extra'};
+  movs.push(m);
+  if(db){try{await db.collection('abonos').doc(id).set(m)}catch(e){}}
+  return id}
+
 async function quitaFondo(id){fondOv[id]={id,del:true};render();
   if(db){try{await db.collection('fondos').doc(id).set({id,del:true})}catch(e){}}}
 async function aceptaSug(id){const x=SUG.find(y=>y.id===id);if(!x)return;
@@ -935,7 +992,7 @@ function render(){
   if(view==='aj'&&!AJ)AJ={...CFG,hogar:H().map(x=>({...x}))};
   scr.innerHTML=(avisoInv?`<div class="ins"><h4>No pudimos unirte a ese hogar</h4>
       <p>${esc(avisoInv)}</p><button class="btn sec2" data-okaviso="1">Entendido</button></div>`:'')
-    +(view==='inv'?vInvitar():view==='cierre'?vCierre():view==='cfg'?vConfig():view==='per'?vPer():view==='cats'?vCats():view==='apr'?vAprend():view==='fon'?vFondos():view==='aj'?vAjustes():view==='edit'?vEdit():det?vDet():view==='home'?vHome():view==='reg'?vReg():view==='mov'?vMov():vAn())
+    +(view==='inv'?vInvitar():view==='cierre'?vCierre():view==='cfg'?vConfig():view==='per'?vPer():view==='cats'?vCats():view==='apr'?vAprend():view==='aho'?vAhorro():view==='fon'?vAhorro():view==='aj'?vAjustes():view==='edit'?vEdit():det?vDet():view==='home'?vHome():view==='reg'?vReg():view==='mov'?vMov():vAn())
     +`<div class="sync ${db?'':'warn'}">${db?'Guardado en tu cuenta':'Sin conexión — no se está guardando'}</div>`;
   if(view==='reg'||view==='edit'){const n=document.getElementById('nota');if(n){
     n.oninput=e=>{nota=e.target.value;pintaSug()};
@@ -1039,6 +1096,19 @@ function render(){
   scr.querySelectorAll('[data-nf]').forEach(el=>el.oninput=e=>{NF=NF||{n:'',c:0};
     if(el.dataset.nf==='c'){const d=e.target.value.replace(/\D/g,'');NF.c=+d;e.target.value=miles(d)}
     else NF.n=e.target.value});
+  scr.querySelectorAll('[data-abcomp],[data-absob]').forEach(b=>b.onclick=async()=>{
+    const fs=fondos(); if(!fs.length)return;
+    const dest=AB.fon||fs[0].id, d=b.dataset;
+    b.disabled=true;
+    await abonar(dest, d.abcomp||d.absob, Q[qIdx()], d.abcomp?'compromiso':'sobrante');
+    render()});
+  scr.querySelectorAll('[data-abf]').forEach(b=>b.onclick=()=>{AB.fon=b.dataset.abf;render()});
+  {const e=document.getElementById('abm');if(e)e.oninput=ev=>{
+     const d=ev.target.value.replace(/\D/g,'').replace(/^0+/,'').slice(0,12);AB.a=d;
+     ev.target.value=d?(+d).toLocaleString('es-CO'):'';
+     const b=scr.querySelector('[data-abok]');if(b)b.disabled=!(AB.fon&&+AB.a>0)}}
+  scr.querySelectorAll('[data-abok]').forEach(b=>b.onclick=async()=>{
+    const f=AB.fon,a=AB.a; AB={fon:'',a:''}; render(); await abonar(f,a); render()});
   scr.querySelectorAll('[data-rmf]').forEach(b=>b.onclick=()=>quitaFondo(b.dataset.rmf));
   scr.querySelectorAll('[data-nm]').forEach(el=>{const f=el.dataset.nm;
     if(f==='meta'){el.oninput=e=>{const d=e.target.value.replace(/\D/g,'');
@@ -1447,7 +1517,7 @@ async function avisaGasto(id, que){
 
 /* ---------- carga ---------- */
 async function cargar(){
-  const [h, ms, ex, fu, co, mc, cl] = await Promise.all([
+  const [h, ms, ex, fu, co, mc, cl, sm] = await Promise.all([
     sb.from('households').select('*').eq('id', hogarId).single(),
     sb.from('members').select('*').eq('household_id', hogarId).order('creado_en'),
     sb.from('expenses').select('*').eq('household_id', hogarId),
@@ -1455,6 +1525,7 @@ async function cargar(){
     sb.from('concepts').select('*').eq('household_id', hogarId),
     sb.from('meta_changes').select('*').eq('household_id', hogarId),
     sb.from('closings').select('*').eq('household_id', hogarId),
+    sb.from('savings_moves').select('*').eq('household_id', hogarId),
   ]);
   hogarRow = h.data || {};
   const miembros = ms.data || [];
@@ -1473,6 +1544,9 @@ async function cargar(){
     { id:r.id, n:r.nombre, d:r.nota||'', c:+r.cuota||0, desde:r.desde_q,
       meta:+r.objetivo||0, mes:+r.meses||0 } });
 
+  movs = (sm.data||[]).map(r => ({ id:r.id, fon:r.fund_id, q:r.q, a:+r.monto||0,
+            origen:r.origen||'extra', nota:r.nota||'' }));
+
   conceptos = {}; (co.data||[]).forEach(r => { conceptos[r.clave] =
     { k:r.clave, n:r.nombre, cob:+r.cobertura||1, fon:r.fund_id||'' } });
 
@@ -1489,7 +1563,7 @@ let canal = null;
 function suscribir(){
   if (canal) sb.removeChannel(canal);
   canal = sb.channel('hogar:'+hogarId);
-  ['expenses','funds','concepts','meta_changes','members','households'].forEach(t =>
+  ['expenses','funds','concepts','meta_changes','members','households','savings_moves'].forEach(t =>
     canal.on('postgres_changes', { event:'*', schema:'public', table:t }, async () => {
       await cargar(); render() }));
   canal.subscribe();
@@ -1512,6 +1586,9 @@ async function escribir(col, id, v){
       if (v.del) { await sb.from('funds').delete().eq('id', id); }
       else { await sb.from('funds').upsert({ id, ...H_(), nombre:v.n, nota:v.d||'',
         cuota:v.c||0, desde_q:v.desde, objetivo:v.meta||0, meses:v.mes||0 }); }
+    } else if (col === 'abonos') {
+      await sb.from('savings_moves').upsert({ id, ...H_(), fund_id:v.fon, q:v.q,
+        monto:v.a, origen:v.origen||'extra', nota:v.nota||'', creado_por: sesion.user.id });
     } else if (col === 'conceptos') {
       await sb.from('concepts').upsert({ ...H_(), clave:v.k, nombre:v.n,
         cobertura:v.cob||1, fund_id:v.fon||null }, { onConflict:'household_id,clave' });
@@ -1529,6 +1606,7 @@ async function borrar(col, id){
     if (col === 'gastos')   await sb.from('expenses').delete().eq('id', id);
     if (col === 'fondos')   await sb.from('funds').delete().eq('id', id);
     if (col === 'metas')    await sb.from('meta_changes').delete().eq('id', id);
+    if (col === 'abonos')   await sb.from('savings_moves').delete().eq('id', id);
     if (col === 'conceptos') await sb.from('concepts').delete()
       .eq('household_id', hogarId).eq('clave', id);
   }catch(e){ console.warn('borrar', col, e) }

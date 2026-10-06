@@ -402,3 +402,12 @@ html,body{max-width:100%;overflow-x:hidden}
 .pers2.sel{background:var(--brand-dim);box-shadow:inset 0 0 0 1px #E7BFAC;color:#8A3C1E}
 .av3{width:25px;height:25px;border-radius:50%;display:grid;place-items:center;flex:none;color:#fff;
   font-family:"Inter Tight",sans-serif;font-weight:700;font-size:12px}
+
+/* ---------- ahorro ---------- */
+.racha{display:flex;align-items:center;gap:11px;background:var(--good-dim);border-radius:var(--r-card);
+  padding:13px 14px;margin-top:12px}
+.racha .ric{width:38px;height:38px;border-radius:50%;background:var(--good);color:#fff;
+  display:grid;place-items:center;flex:none}
+.racha b{display:block;font-family:"Inter Tight",sans-serif;font-size:15px;font-weight:700;color:var(--good)}
+.racha span span{display:block;font-size:12px;color:#54705F;margin-top:1px}
+.tabs .tab{padding-left:0;padding-right:0}
