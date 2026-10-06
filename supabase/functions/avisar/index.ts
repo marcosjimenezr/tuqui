@@ -35,8 +35,14 @@ Deno.serve(async (req) => {
     const jwt = req.headers.get('Authorization') || ''
     if (!jwt) return json({ error: 'sin sesion' }, 401)
 
-    const { gasto } = await req.json().catch(() => ({ gasto: null }))
+    const cuerpoReq = await req.json().catch(() => ({}))
+    const gasto = cuerpoReq.gasto
     if (!gasto) return json({ error: 'falta el gasto' }, 400)
+    // Lista cerrada a proposito: el cliente elige entre tres, no escribe texto.
+    const VERBOS: Record<string, string> = {
+      nuevo: 'registro', cambiado: 'corrigio', borrado: 'borro',
+    }
+    const verbo = VERBOS[cuerpoReq.que] || VERBOS.nuevo
 
     // Con la sesion de quien llama: RLS decide si puede ver ese gasto.
     const mio = createClient(URL, ANON, { global: { headers: { Authorization: jwt } } })
@@ -63,7 +69,7 @@ Deno.serve(async (req) => {
     if (!subs?.length) return json({ enviados: 0, motivo: 'nadie tiene avisos activos' })
 
     const cuerpo = JSON.stringify({
-      t: (yo?.nombre || 'Alguien') + ' registro ' + g.nombre,
+      t: (yo?.nombre || 'Alguien') + ' ' + verbo + ' ' + g.nombre,
       b: plata(Number(g.monto)),
       g: g.id,
     })

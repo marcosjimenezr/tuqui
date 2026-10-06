@@ -1083,24 +1083,27 @@ async function guardar(){
   ultimo={...g};amt='';cat=null;nota='';cob=1;fon='';por=yoSoy().id;catOpen=false;detOpen=false;
   view='reg';lastKey='';render();
   const a=document.getElementById('amt');if(a)a.focus();
-  if(db){try{await db.collection('gastos').doc(g.id).set(g);avisaGasto(g.id)}catch(e){}}}
+  if(db){try{await db.collection('gastos').doc(g.id).set(g);avisaGasto(g.id,'nuevo')}catch(e){}}}
 async function deshacer(){if(!ultimo)return;const id=ultimo.id;
   nuevos=nuevos.filter(g=>g.id!==id);ultimo=null;render();
-  if(db){try{await db.collection('gastos').doc(id).delete()}catch(e){}}}
+  // El otro ya recibio el aviso del alta: si no le avisamos del deshacer,
+  // le queda una notificacion de algo que no existe.
+  if(db){try{await avisaGasto(id,'borrado');await db.collection('gastos').doc(id).delete()}catch(e){}}}
 async function guardarEdit(){
   const upd={cat,a:+amt,n:nota.trim()||CM[cat].n,por,cob,fon},k=editKey;
   if(k[0]==='s'){overrides[k]={...(overrides[k]||{}),...upd};
     if(db){try{await db.collection('ediciones').doc(k).set({...overrides[k],k})}catch(e){}}}
   else{const j=nuevos.findIndex(x=>x.id===k);
     if(j>=0){nuevos[j]={...nuevos[j],...upd};
-      if(db){try{await db.collection('gastos').doc(k).set(nuevos[j])}catch(e){}}}}
+      if(db){try{await db.collection('gastos').doc(k).set(nuevos[j]);avisaGasto(k,'cambiado')}catch(e){}}}}
   editKey=null;amt='';cat=null;nota='';cob=1;fon='';view='mov';render()}
 async function borrarActual(){
   const k=editKey;
   if(k[0]==='s'){overrides[k]={del:true};
     if(db){try{await db.collection('ediciones').doc(k).set({del:true,k})}catch(e){}}}
   else{nuevos=nuevos.filter(g=>g.id!==k);
-    if(db){try{await db.collection('gastos').doc(k).delete()}catch(e){}}}
+    // Primero el aviso, que necesita leer el gasto; despues si se borra.
+    if(db){try{await avisaGasto(k,'borrado');await db.collection('gastos').doc(k).delete()}catch(e){}}}
   editKey=null;amt='';cat=null;nota='';cob=1;fon='';view='home';det=null;render()}
 
 
@@ -1429,13 +1432,16 @@ async function apagaPush(){
 
 // Se avisa despues de guardar. Si el aviso falla, el gasto ya quedo guardado:
 // no tiene sentido alarmar a nadie por eso.
-async function avisaGasto(id){
+// que: 'nuevo' | 'cambiado' | 'borrado'. El servidor solo acepta esas tres y
+// arma el texto el mismo leyendo el gasto, asi nadie puede inventar un mensaje.
+// Para 'borrado' hay que llamar ANTES de borrar: despues ya no hay que leer.
+async function avisaGasto(id, que){
   if (!sb || !sesion || !CFGX.SUPABASE_URL) return;
   try {
     await fetch(CFGX.SUPABASE_URL + '/functions/v1/Avisar', { method: 'POST',
       headers: { 'Content-Type': 'application/json', 'apikey': CFGX.SUPABASE_ANON_KEY || '',
                  'Authorization': 'Bearer ' + sesion.access_token },
-      body: JSON.stringify({ gasto: id }) });
+      body: JSON.stringify({ gasto: id, que: que || 'nuevo' }) });
   } catch(e) { console.warn('aviso', e) }
 }
 
