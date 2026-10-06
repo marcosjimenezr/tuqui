@@ -392,6 +392,10 @@ function vMov(){
   <p class="hint">Toca cualquier gasto para corregirle el monto, el nombre o la categoría. También los del histórico.</p>
   <div class="spacer"></div>`}
 
+// Quien esta usando la app, como integrante del hogar. Es el valor por defecto de
+// "quien pago": se muestra desde el registro en vez de adivinarse despues al cerrar.
+function yoSoy(){const hs=H(), u=(sesion&&sesion.user&&sesion.user.id)||'';
+  return (u&&hs.find(x=>x.u===u))||hs[0]||{id:'',n:''}}
 const atajos=()=>conocidos().filter(e=>e.v>=3).slice(0,7);
 function catsTop(n){const c={};todos().forEach(g=>{c[g.cat]=(c[g.cat]||0)+1});
   return CATS.slice().sort((a,b)=>(c[b.id]||0)-(c[a.id]||0)).slice(0,n)}
@@ -427,6 +431,10 @@ function formulario(modoEdit){
     <input class="amtin" id="amt" inputmode="numeric" enterkeyhint="next" placeholder="0"
       value="${amt?(+amt).toLocaleString('es-CO'):''}"></div>
   <div class="amtp" id="amtp">${pesos?'':'escribe el valor completo, por ejemplo 135000'}</div>
+  ${H().length>1?`<div class="pagoq"><span class="pl2">Pag&oacute;</span>
+    ${H().map((pp,k)=>`<button class="pers2${idPor(por)===pp.id?' sel':''}" data-por="${pp.id}">
+      <span class="av3" style="background:${COLP[k%COLP.length]}">${esc((pp.n||'?').trim().charAt(0).toUpperCase()||'?')}</span>
+      ${esc(pp.n)}</button>`).join('')}</div>`:''}
   <div class="sec"><b>¿Qué fue?</b></div>
   <input class="field" id="nota" placeholder="Rappi, Pricesmart, Urleny…" value="${esc(nota)}"
     autocomplete="off" enterkeyhint="done">
@@ -444,11 +452,8 @@ function formulario(modoEdit){
     c.fon&&FM()[c.fon]?' · sale del fondo '+esc(FM()[c.fon].n):''}. Se aplica solo.</p>`:''}
   ${preCob?bloqueCob():''}
   ${preFon?bloqueFon():''}
-  <button class="more" data-more="1">${detOpen?'Ocultar detalles ▴':'Más detalles ▾'}</button>
-  ${detOpen?`<div class="sec"><b>¿Quién pagó?</b></div>
-  <div class="pills">${H().map((pp,k)=>`<button class="pill ${idPor(por)===pp.id?'sel':''}" data-por="${pp.id}">
-    <span class="d" style="background:${COLP[k%COLP.length]}"></span>${esc(pp.n)}</button>`).join('')}</div>
-  ${preCob?'':bloqueCob()}${preFon?'':bloqueFon()}`:''}
+  ${(!preCob||(!preFon&&fondos().length))?`<button class="more" data-more="1">${detOpen?'Ocultar detalles ▴':'Más detalles ▾'}</button>
+  ${detOpen?`${preCob?'':bloqueCob()}${preFon?'':bloqueFon()}`:''}`:''}
   ${modoEdit?`<button class="btn" ${amt&&cat?'':'disabled'} data-upd="1">Guardar cambios</button>
     <button class="btn dan" data-rm2="1">Borrar este gasto</button>`
    :`<button class="btn" id="gb" ${amt&&cat?'':'disabled'} data-save="1">Guardar</button>`}
@@ -976,7 +981,7 @@ function render(){
     render()});
   scr.querySelectorAll('[data-pend]').forEach(b=>b.onclick=()=>{
     const e=recMap()[b.dataset.pend];if(!e)return;
-    amt=String(e.med);cat=e.cat;nota=e.n;cob=1;fon='';por='';
+    amt=String(e.med);cat=e.cat;nota=e.n;cob=1;fon='';por=yoSoy().id;
     catOpen=false;detOpen=false;ultimo=null;view='reg';det=null;render()});
   scr.querySelectorAll('[data-mv]').forEach(b=>b.onclick=()=>{i+=+b.dataset.mv;det=null;render()});
   scr.querySelectorAll('[data-ver]').forEach(b=>b.onclick=()=>{
@@ -989,7 +994,7 @@ function render(){
     if(b.dataset.go2==='aj'){AJ={...CFG,hogar:H().map(x=>({...x}))};vig='desde'}
     if(b.dataset.go2==='fon'){NF={n:'',c:0};NM={n:'',meta:0,mes:0}}
     if(b.dataset.go2==='per'){perBack=(view==='mov'||view==='an')?view:'home'}
-    if(b.dataset.go2==='reg'){amt='';cat=null;nota='';cob=1;fon='';por='';catOpen=false;detOpen=false;ultimo=null}
+    if(b.dataset.go2==='reg'){amt='';cat=null;nota='';cob=1;fon='';por=yoSoy().id;catOpen=false;detOpen=false;ultimo=null}
     view=b.dataset.go2;det=null;render()});
   scr.querySelectorAll('[data-ph]').forEach(el=>el.oninput=e=>{
     AJ.hogar[+el.dataset.ph].n=e.target.value;
@@ -1063,7 +1068,7 @@ function render(){
   scr.scrollTop=(key===lastKey)?y:0; lastKey=key;
 }
 function abrirEdit(k){const g=todos().find(x=>x.k===k);if(!g)return;
-  editKey=k;amt=String(Math.round(g.a));cat=g.cat;por=idPor(g.por);cob=g.cob||1;fon=g.fon||'';nota=g.n;
+  editKey=k;amt=String(Math.round(g.a));cat=g.cat;por=idPor(g.por)||quienPago(g);cob=g.cob||1;fon=g.fon||'';nota=g.n;
   catOpen=false;detOpen=false;ultimo=null;view='edit';det=null;render()}
 async function guardar(){
   const q=modo==='q'?Q[i]:MES[i]+' 2';
@@ -1073,7 +1078,7 @@ async function guardar(){
   nuevos.push(g);
   if(kk&&(cb>1||fn)&&(!c||c.cob!==cb||c.fon!==fn)){const doc={k:kk,n:nom,cob:cb,fon:fn};conceptos[kk]=doc;
     if(db){try{await db.collection('conceptos').doc(kk).set(doc)}catch(e){}}}
-  ultimo={...g};amt='';cat=null;nota='';cob=1;fon='';por='';catOpen=false;detOpen=false;
+  ultimo={...g};amt='';cat=null;nota='';cob=1;fon='';por=yoSoy().id;catOpen=false;detOpen=false;
   view='reg';lastKey='';render();
   const a=document.getElementById('amt');if(a)a.focus();
   if(db){try{await db.collection('gastos').doc(g.id).set(g)}catch(e){}}}
@@ -1503,7 +1508,7 @@ async function invitar(email, memberId){
 tabs.onclick = e => {
   const b = e.target.closest('.tab'); if (!b) return;
   const v = b.dataset.go; if (!v) return;
-  if (v === 'reg') { amt=''; cat=null; nota=''; cob=1; fon=''; por=''; catOpen=false; detOpen=false; ultimo=null }
+  if (v === 'reg') { amt=''; cat=null; nota=''; cob=1; fon=''; por=yoSoy().id; catOpen=false; detOpen=false; ultimo=null }
   view = v; det = null; render();
 };
 
