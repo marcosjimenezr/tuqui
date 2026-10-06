@@ -396,7 +396,6 @@ function vMov(){
 // "quien pago": se muestra desde el registro en vez de adivinarse despues al cerrar.
 function yoSoy(){const hs=H(), u=(sesion&&sesion.user&&sesion.user.id)||'';
   return (u&&hs.find(x=>x.u===u))||hs[0]||{id:'',n:''}}
-const atajos=()=>conocidos().filter(e=>e.v>=3).slice(0,7);
 function catsTop(n){const c={};todos().forEach(g=>{c[g.cat]=(c[g.cat]||0)+1});
   return CATS.slice().sort((a,b)=>(c[b.id]||0)-(c[a.id]||0)).slice(0,n)}
 
@@ -417,15 +416,10 @@ function bloqueFon(){if(!fondos().length)return '';
 function formulario(modoEdit){
   const pesos=+amt||0, c=conceptos[clave(nota)], km=CM[cat],
         preCob=!modoEdit&&!c&&pesos>=umbral(),
-        preFon=!modoEdit&&!c&&fondos().length&&pesos>=umbral()/2,
-        at=atajos();
+        preFon=!modoEdit&&!c&&fondos().length&&pesos>=umbral()/2;
   return `
   ${!modoEdit&&ultimo?`<div class="saved"><span>Guardado <b>${esc(ultimo.n)}</b> · ${fmt(ultimo.a)}</span>
     <button data-undo="1">Deshacer</button></div>`:''}
-  ${!modoEdit&&at.length?`<div class="sec"><b>Lo de siempre</b><span>toca y ajusta</span></div>
-  <div class="sugn atj">${at.map(e=>`<button data-at="${esc(e.n)}" data-ac="${e.cat}" data-am="${Math.round(e.med)}">
-    <span class="k" style="background:${(CM[e.cat]||{c:'#8A8378'}).c}"></span>
-    <span><b>${esc(e.n)}</b><em>${fmtK(e.med)} de costumbre</em></span></button>`).join('')}</div>`:''}
   <div class="sec"><b>¿Cuánto?</b><span>en pesos</span></div>
   <div class="amtw"><span class="cur">$</span>
     <input class="amtin" id="amt" inputmode="numeric" enterkeyhint="next" placeholder="0"
@@ -1028,9 +1022,6 @@ function render(){
   scr.querySelectorAll('[data-catopen]').forEach(b=>b.onclick=()=>{catOpen=true;render()});
   scr.querySelectorAll('[data-more]').forEach(b=>b.onclick=()=>{detOpen=!detOpen;render()});
   scr.querySelectorAll('[data-undo]').forEach(b=>b.onclick=deshacer);
-  scr.querySelectorAll('[data-at]').forEach(b=>b.onclick=()=>{nota=b.dataset.at;cat=b.dataset.ac;
-    amt=b.dataset.am;catOpen=false;ultimo=null;render();
-    const a=document.getElementById('amt');if(a){a.focus();a.select&&a.select()}});
   scr.querySelectorAll('[data-por]').forEach(b=>b.onclick=()=>{por=b.dataset.por;render()});
   scr.querySelectorAll('[data-cob]').forEach(b=>b.onclick=()=>{cob=+b.dataset.cob;render()});
   scr.querySelectorAll('[data-fon]').forEach(b=>b.onclick=()=>{fon=b.dataset.fon;render()});
