@@ -875,6 +875,14 @@ function vConfig(){const k=qIdx(),hs=H(),
    <span class="ci"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4.5 12.5 9 17l10.5-10"/></svg></span>
    <span class="ct"><b>Lo que la app aprendi\u00f3</b><span>${ncc?ncc+' concepto'+(ncc===1?'':'s')+' con respuesta guardada':'todav\u00eda no ha aprendido nada'}</span></span>
    <i>\u203a</i></button>
+ <button class="cfgr" data-push="1">
+   <span class="ci"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8.5a6 6 0 1 0-12 0c0 5-2 6.5-2 6.5h16s-2-1.5-2-6.5"/><path d="M13.7 19.5a2 2 0 0 1-3.4 0"/></svg></span>
+   <span class="ct"><b>Avisos en el celular</b><span>${
+     pushEstado==='listo'   ? 'activos \u00b7 te avisamos cuando el otro registre un gasto'
+   : pushEstado==='bloqueado'? 'bloqueados desde los ajustes del tel\u00e9fono'
+   : pushEstado==='nosirve' ? 'hay que instalar la app en la pantalla de inicio'
+   : 'tocar para activarlos'}</span></span>
+   <i>${pushEstado==='listo'?'\u2713':'\u203a'}</i></button>
  <button class="cfgr" data-go2="inv">
    <span class="ci"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 6.5h16v11H4z"/><path d="m4.6 7.2 7.4 5.3 7.4-5.3"/></svg></span>
    <span class="ct"><b>Invitar a alguien</b><span>mandarle un enlace para que entre a este hogar</span></span>
@@ -887,6 +895,7 @@ function vConfig(){const k=qIdx(),hs=H(),
    <span class="ci"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20 4v4.5h-4.5"/></svg></span>
    <span class="ct"><b>Buscar actualizaci\u00f3n</b><span id="vst">versi\u00f3n ${verBonita(MIVER)}</span></span>
    <i>\u203a</i></button>
+ ${pushMsg?`<p class="hint" style="color:var(--brand)">${esc(pushMsg)}</p>`:''}
  <p class="hint">El hogar puede cambiar: alguien entra, alguien sale, o cambia lo que pone cada uno.
  Nada de esto queda fijo desde el principio \u2014 se ajusta aqu\u00ed cuando pase.</p>
  <div class="spacer"></div>`}
@@ -1043,6 +1052,8 @@ function render(){
   scr.querySelectorAll('[data-okf]').forEach(b=>b.onclick=()=>aceptaSug(b.dataset.okf));
   scr.querySelectorAll('[data-nof]').forEach(b=>b.onclick=()=>descartaSug(b.dataset.nof));
   scr.querySelectorAll('[data-olv]').forEach(b=>b.onclick=()=>olvidar(b.dataset.olv));
+  scr.querySelectorAll('[data-push]').forEach(b=>b.onclick=()=>{
+    if(pushEstado==='listo')apagaPush(); else activaPush()});
   scr.querySelectorAll('[data-out]').forEach(b=>b.onclick=()=>salir());
   scr.querySelectorAll('[data-noexiste]').forEach(b=>b.onclick=async()=>{
     const em=prompt('\u00bfA qu\u00e9 correo le mandas la invitaci\u00f3n?');
@@ -1072,7 +1083,7 @@ async function guardar(){
   ultimo={...g};amt='';cat=null;nota='';cob=1;fon='';por=yoSoy().id;catOpen=false;detOpen=false;
   view='reg';lastKey='';render();
   const a=document.getElementById('amt');if(a)a.focus();
-  if(db){try{await db.collection('gastos').doc(g.id).set(g)}catch(e){}}}
+  if(db){try{await db.collection('gastos').doc(g.id).set(g);avisaGasto(g.id)}catch(e){}}}
 async function deshacer(){if(!ultimo)return;const id=ultimo.id;
   nuevos=nuevos.filter(g=>g.id!==id);ultimo=null;render();
   if(db){try{await db.collection('gastos').doc(id).delete()}catch(e){}}}
@@ -1256,6 +1267,7 @@ async function ruta(){
   hogarId = ms[0].household_id;
   await cargar();
   aplicaPer();
+  revisaPush().then(render);
   entraApp();
   suscribir();
   render();
@@ -1362,10 +1374,70 @@ function mostrarCrear(){
     }
     NH = null;
     await cargar(); aplicaPer(); entraApp(); suscribir(); render();
+    revisaPush().then(render);
   };
 }
 
 async function salir(){ await sb.auth.signOut(); hogarId=null; location.reload() }
+
+/* ---------- avisos en el celular ---------- */
+// En iPhone esto solo existe si la app esta instalada en la pantalla de inicio.
+const PUSH_HAY = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+let pushEstado = 'no', pushMsg = '';   // 'listo' | 'no' | 'bloqueado' | 'nosirve'
+
+const b64bytes = b64 => {
+  const t = (b64 + '='.repeat((4 - b64.length % 4) % 4)).replace(/-/g,'+').replace(/_/g,'/');
+  const raw = atob(t), out = new Uint8Array(raw.length);
+  for (let k = 0; k < raw.length; k++) out[k] = raw.charCodeAt(k);
+  return out };
+
+async function revisaPush(){
+  if (!PUSH_HAY()) { pushEstado = 'nosirve'; return }
+  if (Notification.permission === 'denied') { pushEstado = 'bloqueado'; return }
+  try { const reg = await navigator.serviceWorker.ready;
+        pushEstado = (await reg.pushManager.getSubscription()) ? 'listo' : 'no' }
+  catch(e) { pushEstado = 'no' }
+}
+
+async function activaPush(){
+  if (!PUSH_HAY()) { pushEstado = 'nosirve'; render(); return }
+  // El permiso se pide PRIMERO, en el mismo toque: iOS no lo concede
+  // si antes hubo una espera. Lo demas si puede esperar.
+  let permiso = Notification.permission;
+  if (permiso === 'default') { try { permiso = await Notification.requestPermission() } catch(e){} }
+  if (permiso !== 'granted') { pushEstado = permiso === 'denied' ? 'bloqueado' : 'no'; render(); return }
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true,
+      applicationServerKey: b64bytes(CFGX.VAPID_PUBLIC || '') });
+    const j = sub.toJSON();
+    await sb.from('push_subs').upsert({ household_id: hogarId, user_id: sesion.user.id,
+      endpoint: j.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth }, { onConflict: 'endpoint' });
+    pushEstado = 'listo'; pushMsg = '';
+  } catch(e) { pushEstado = 'no'; pushMsg = 'No se pudo activar: ' + ((e && e.message) || e) }
+  render();
+}
+
+async function apagaPush(){
+  try { const reg = await navigator.serviceWorker.ready;
+        const sub = await reg.pushManager.getSubscription();
+        if (sub) { await sb.from('push_subs').delete().eq('endpoint', sub.endpoint);
+                   await sub.unsubscribe() } } catch(e){}
+  pushEstado = 'no'; pushMsg = ''; render();
+}
+
+// Se avisa despues de guardar. Si el aviso falla, el gasto ya quedo guardado:
+// no tiene sentido alarmar a nadie por eso.
+async function avisaGasto(id){
+  if (!sb || !sesion || !CFGX.SUPABASE_URL) return;
+  try {
+    await fetch(CFGX.SUPABASE_URL + '/functions/v1/avisar', { method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': CFGX.SUPABASE_ANON_KEY || '',
+                 'Authorization': 'Bearer ' + sesion.access_token },
+      body: JSON.stringify({ gasto: id }) });
+  } catch(e) { console.warn('aviso', e) }
+}
 
 /* ---------- carga ---------- */
 async function cargar(){

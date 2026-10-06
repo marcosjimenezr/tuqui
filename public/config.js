@@ -14,6 +14,10 @@ window.TUQUI_CONFIG = {
   // Pon en true cada uno SOLO cuando ya lo hayas configurado en
   // Supabase (Authentication -> Providers). Si se muestra el boton
   // sin estar configurado, da error al tocarlo.
+  // Llave publica de los avisos. Es publica por diseno, igual que la anon.
+  // La privada vive solo como secreto en Supabase, nunca en este archivo.
+  VAPID_PUBLIC: 'BPl8-LYcybnrX57nIeyH4CvpaZRoCMeHHR6EQe3cVwVYan7k1rKNrbas6FmKmssPQknO91BlgNweJn1Z45fhznQ',
+
   GOOGLE: false,
   APPLE:  false,
 };
