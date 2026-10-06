@@ -1432,7 +1432,7 @@ async function apagaPush(){
 async function avisaGasto(id){
   if (!sb || !sesion || !CFGX.SUPABASE_URL) return;
   try {
-    await fetch(CFGX.SUPABASE_URL + '/functions/v1/avisar', { method: 'POST',
+    await fetch(CFGX.SUPABASE_URL + '/functions/v1/Avisar', { method: 'POST',
       headers: { 'Content-Type': 'application/json', 'apikey': CFGX.SUPABASE_ANON_KEY || '',
                  'Authorization': 'Bearer ' + sesion.access_token },
       body: JSON.stringify({ gasto: id }) });
