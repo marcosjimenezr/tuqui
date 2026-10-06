@@ -1101,7 +1101,7 @@ async function borrarActual(){
     if(db){try{await db.collection('ediciones').doc(k).set({del:true,k})}catch(e){}}}
   else{nuevos=nuevos.filter(g=>g.id!==k);
     if(db){try{await db.collection('gastos').doc(k).delete()}catch(e){}}}
-  editKey=null;amt='';cat=null;nota='';cob=1;fon='';view='mov';render()}
+  editKey=null;amt='';cat=null;nota='';cob=1;fon='';view='home';det=null;render()}
 
 
 /* ================================================================
