@@ -411,3 +411,9 @@ html,body{max-width:100%;overflow-x:hidden}
 .racha b{display:block;font-family:"Inter Tight",sans-serif;font-size:15px;font-weight:700;color:var(--good)}
 .racha span span{display:block;font-size:12px;color:#54705F;margin-top:1px}
 .tabs .tab{padding-left:0;padding-right:0}
+
+/* imprevistos: una etiqueta transversal, no una categoria */
+.tag.im{background:var(--over-dim);color:var(--over)}
+.impq{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:20px 2px 0}
+.impq .il{font-family:"Inter Tight",sans-serif;font-size:15px;font-weight:700;
+  letter-spacing:-.01em;margin-right:4px}

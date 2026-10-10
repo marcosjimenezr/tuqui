@@ -93,7 +93,7 @@ let modo='q', i=Math.max(Q.indexOf(qHoy()),0), view='home', det=null, db=null,
     nuevos=[], overrides={}, editKey=null, lastKey='', amt='', cat=null, por='', nota='',
     AJ=null, vig='desde', cob=1, fon='', fondOv={}, NF=null, NM=null, conceptos={},
     catOpen=false, detOpen=false, ultimo=null, cierres={}, INV=null,
-    perBack='home', AB={fon:'',a:''};
+    perBack='home', AB={fon:'',a:''}, imp=null;  // null = sin contestar
 
 const U=()=>modo==='q'?Q:MES;
 const qIdx=()=>modo==='q'?i:2*i+1;
@@ -108,8 +108,9 @@ function todos(){const out=[];
     out.push({k,q:ov.q||g.q,cat:norCat(ov.cat||g.cat),n:ov.n!==undefined?ov.n:g.n,
       a:ov.a!==undefined?ov.a:g.a*1000,por:ov.por||0,cob:ov.cob!==undefined?ov.cob:(g.cob||1),
       fon:ov.fon!==undefined?ov.fon:(g.fon||''),
+      imp:!!ov.imp,
       seed:1,edit:!!ov.cat||ov.n!==undefined||ov.a!==undefined})});
-  nuevos.forEach(g=>out.push({k:g.id,q:g.q,cat:norCat(g.cat),n:g.n,a:g.a,por:g.por||0,cob:g.cob||1,fon:g.fon||'',id:g.id,cpor:g.cpor||'',ce:g.ce||g.at||''}));
+  nuevos.forEach(g=>out.push({k:g.id,q:g.q,cat:norCat(g.cat),n:g.n,a:g.a,por:g.por||0,cob:g.cob||1,fon:g.fon||'',id:g.id,cpor:g.cpor||'',ce:g.ce||g.at||'',imp:!!g.imp}));
   return out}
 const qi=g=>Q.indexOf(g.q);
 const per=g=>(g.cob&&g.cob>1)?g.cob*2:1;
@@ -120,6 +121,19 @@ function costMat(){if(_cc)return _cc;const M={};
   return _cc=M}
 const costoQ=(k,c)=>(costMat()[k]||{})[c]||0;
 const costo=(k,c)=>modo==='q'?costoQ(k,c):costoQ(2*k,c)+costoQ(2*k+1,c);
+// Lo mismo pero sin los imprevistos. Una urgencia de dos millones no puede
+// quedarse inflando el promedio de una categoria para siempre.
+let _cn=null;
+function costMatN(){if(_cn)return _cn;const M={};
+  todos().filter(g=>!g.imp).forEach(g=>{const a=qi(g);if(a<0)return;const n=per(g),u=g.a/n;
+    for(let k=a;k<a+n&&k<Q.length;k++){M[k]=M[k]||{};M[k][g.cat]=(M[k][g.cat]||0)+u}});
+  return _cn=M}
+const costoNQ=(k,c)=>(costMatN()[k]||{})[c]||0;
+const costoN=(k,c)=>modo==='q'?costoNQ(k,c):costoNQ(2*k,c)+costoNQ(2*k+1,c);
+// Cuanto se fue en imprevistos en un periodo, y cuanto suelen costar.
+const impTot=k=>items(k).filter(g=>g.imp&&!g.fon).reduce((s,g)=>s+g.a,0);
+function promImp(){const n=Math.min(i,modo==='q'?6:3);if(n<1)return 0;
+  let s=0;for(let k=i-n;k<i;k++)s+=impTot(k);return s/n}
 function cubiertos(){const k=qIdx();return todos().filter(g=>{const a=qi(g);
   return g.cob>1&&a>=0&&k>=a&&k<a+per(g)}).sort((a,b)=>qi(a)+per(a)-(qi(b)+per(b)))}
 const hastaQ=g=>{const f=qi(g)+per(g)-1,y=2026+Math.floor(f/24),x=((f%24)+24)%24;
@@ -208,7 +222,7 @@ const totLibre=k=>items(k).filter(g=>!g.fon).reduce((s,g)=>s+g.a,0);
 const totFondo=k=>items(k).filter(g=>g.fon).reduce((s,g)=>s+g.a,0);
 const catTot=(k,c)=>items(k).filter(g=>g.cat===c).reduce((s,g)=>s+g.a,0);
 const prom=c=>{const n=Math.min(i,modo==='q'?6:3);if(n<1)return 0;let s=0;
-  for(let k=i-n;k<i;k++)s+=costo(k,c);return s/n};
+  for(let k=i-n;k<i;k++)s+=costoN(k,c);return s/n};
 const fmt=v=>'$'+Math.round(v).toLocaleString('es-CO');
 const fmtK=v=>Math.abs(v)>=1000000?'$'+(v/1000000).toFixed(1).replace('.',',')+'M':'$'+Math.round(v/1000)+'k';
 const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
@@ -382,7 +396,7 @@ function fechaReg(iso){
 function fila(g,sub,fecha){const an=g.cob>1,rc=recMap()[clave(g.n)];
   return `<button class="row" data-edit="${g.k}">
   ${icCat(g.cat)}
-  <span class="tx"><b>${esc(g.n)}${an?`<span class="tag an">${g.cob} meses</span>`:''}${
+  <span class="tx"><b>${esc(g.n)}${g.imp?'<span class="tag im">imprevisto</span>':''}${an?`<span class="tag an">${g.cob} meses</span>`:''}${
     !an&&rc?`<span class="tag rc">\u21bb ${cadaTxt(rc.cada)}</span>`:''}</b>
   <span>${an?fmt(g.a/per(g))+' por quincena · cubre hasta '+hastaQ(g).toLowerCase():sub}</span></span>
   <span class="amt">${fmt(g.a)}${fecha?`<em>${fecha}</em>`:''}</span></button>`}
@@ -428,6 +442,17 @@ function bloqueFon(){if(!fondos().length)return '';
   ${fon&&FM()[fon]?`<p class="hint">No cuenta contra la meta de esta quincena: sale del saldo de
    <b>${esc(FM()[fon].n)}</b>, que hoy tiene ${fmt(saldo(FM()[fon],qIdx()))}.</p>`:''}`}
 
+// Preguntar por todo cansa y se vuelve ruido. Solo se pregunta cuando el gasto
+// se sale de lo normal: o cuesta mas del doble de lo que ese mismo concepto
+// suele costar, o una sola compra vale lo que la categoria entera en un periodo.
+function esRaro(pesos,cat,nota){
+  if(!(pesos>0)||!cat)return false;
+  const c=conocidos().find(e=>clave(e.n)===clave(nota));
+  if(c&&c.v>=2) return pesos>=Math.max(c.med*2.2,40000);
+  const p=prom(cat);
+  if(p>0) return pesos>=p;
+  return pesos>=umbral()}
+
 function formulario(modoEdit){
   const pesos=+amt||0, c=conceptos[clave(nota)], km=CM[cat],
         preCob=!modoEdit&&!c&&pesos>=umbral(),
@@ -459,6 +484,11 @@ function formulario(modoEdit){
     ${catOpen?'':'<button class="pill" data-catopen="1">Otras ›</button>'}</div>`}
   ${c?`<p class="hint">Ya sabíamos de <b>${esc(nota)}</b>: ${c.cob>1?'cubre '+c.cob+' meses':'gasto de la quincena'}${
     c.fon&&FM()[c.fon]?' · sale del fondo '+esc(FM()[c.fon].n):''}. Se aplica solo.</p>`:''}
+  ${(modoEdit||esRaro(pesos,cat,nota))?`
+  <div class="impq"><span class="il">\u00bfFue un imprevisto?</span>
+    <button class="pill ${imp===true?'sel':''}" data-imp="1">S\u00ed</button>
+    <button class="pill ${imp===true?'':'sel'}" data-imp="0">No</button></div>
+  ${imp===true?'<p class="hint">Queda marcado. No va a contar en los promedios ni en la meta que la app sugiere \u2014 pero s\u00ed en lo que gastaron.</p>':''}`:''}
   ${preCob?bloqueCob():''}
   ${preFon?bloqueFon():''}
   ${(!preCob||(!preFon&&fondos().length))?`<button class="more" data-more="1">${detOpen?'Ocultar detalles ▴':'Más detalles ▾'}</button>
@@ -589,6 +619,12 @@ function vCierre(){
       ?`Hab\u00edan pactado ${fmt(pactTot)} y gastaron ${fmt(total)}. Esa plata no hizo falta ponerla.`
       :`Hab\u00edan pactado ${fmt(pactTot)} y gastaron ${fmt(total)}. Si se repite, toca subir la cuota o recortar.`}</p></div>
 
+  ${(()=>{const im=impTot(i); if(!im||!total)return '';
+    const pi=promImp();
+    return `<div class="ins"><h4>${fmt(im)} de esto fueron imprevistos</h4>
+      <p>El ${Math.round(im/total*100)}% de ${et==='quincena'?'la quincena':'el mes'}.
+      Sin eso habr\u00edan gastado ${fmt(total-im)}.${pi>0?' En '+(modo==='q'?'las quincenas':'los meses')+' anteriores los imprevistos promediaron '+fmt(pi)+' \u2014 esa es la talla que deber\u00eda tener su colch\u00f3n.':''}</p></div>`})()}
+
   ${(()=>{const fs=fondos(); if(!fs.length)return '';
     const qq=Q[qIdx()], dest=AB.fon||fs[0].id, dn=(fs.find(f=>f.id===dest)||fs[0]).n,
           comp=prov(i), yaC=abonoOrigen(qq,'compromiso'), yaS=abonoOrigen(qq,'sobrante'), rc=racha();
@@ -636,7 +672,7 @@ function vAn(){
 /* ---------- meta y aportes ---------- */
 const hayMeta=()=>(+CFG.meta>0)||metas.length>0;
 function qsConDatos(){const T=todos(),v=[];
-  for(let k=0;k<qIdx();k++){const s=T.filter(g=>g.q===Q[k]).reduce((a,g)=>a+g.a,0);if(s>0)v.push(s)}
+  for(let k=0;k<qIdx();k++){const s=T.filter(g=>g.q===Q[k]&&!g.imp).reduce((a,g)=>a+g.a,0);if(s>0)v.push(s)}
   return v}
 function sugInicial(){const v=qsConDatos();if(v.length<2)return 0;
   const u=v.slice(-6).sort((a,b)=>a-b),n=u.length;
@@ -645,7 +681,7 @@ function sugInicial(){const v=qsConDatos();if(v.length<2)return 0;
 const listaY=a=>a.length<2?a.join(''):a.slice(0,-1).join(', ')+' y '+a[a.length-1];
 
 function sugerida(){const T=todos(),v=[];
-  for(let k=0;k<qIdx();k++){const s=T.filter(g=>g.q===Q[k]).reduce((a,g)=>a+g.a,0);if(s>0)v.push(s)}
+  for(let k=0;k<qIdx();k++){const s=T.filter(g=>g.q===Q[k]&&!g.imp).reduce((a,g)=>a+g.a,0);if(s>0)v.push(s)}
   if(v.length<3)return 0;
   const u=v.slice(-6).sort((a,b)=>a-b),n=u.length;
   const med=n%2?u[(n-1)/2]:(u[n/2-1]+u[n/2])/2;
@@ -986,7 +1022,7 @@ function vAprend(){const cs=Object.values(conceptos);
  <div class="spacer"></div>`}
 
 function render(){
-  _cc=null;_rec=null;
+  _cc=null;_cn=null;_rec=null;
   [...tabs.children].forEach(b=>b.classList.toggle('on',b.dataset.go===view));
   const y=scr.scrollTop;
   if(view==='aj'&&!AJ)AJ={...CFG,hogar:H().map(x=>({...x}))};
@@ -1041,7 +1077,7 @@ function render(){
     render()});
   scr.querySelectorAll('[data-pend]').forEach(b=>b.onclick=()=>{
     const e=recMap()[b.dataset.pend];if(!e)return;
-    amt=String(e.med);cat=e.cat;nota=e.n;cob=1;fon='';por=yoSoy().id;
+    amt=String(e.med);cat=e.cat;nota=e.n;cob=1;fon='';por=yoSoy().id;imp=null;
     catOpen=false;detOpen=false;ultimo=null;view='reg';det=null;render()});
   scr.querySelectorAll('[data-mv]').forEach(b=>b.onclick=()=>{i+=+b.dataset.mv;det=null;render()});
   scr.querySelectorAll('[data-ver]').forEach(b=>b.onclick=()=>{
@@ -1054,7 +1090,7 @@ function render(){
     if(b.dataset.go2==='aj'){AJ={...CFG,hogar:H().map(x=>({...x}))};vig='desde'}
     if(b.dataset.go2==='fon'){NF={n:'',c:0};NM={n:'',meta:0,mes:0}}
     if(b.dataset.go2==='per'){perBack=(view==='mov'||view==='an')?view:'home'}
-    if(b.dataset.go2==='reg'){amt='';cat=null;nota='';cob=1;fon='';por=yoSoy().id;catOpen=false;detOpen=false;ultimo=null}
+    if(b.dataset.go2==='reg'){amt='';cat=null;nota='';cob=1;fon='';por=yoSoy().id;imp=null;catOpen=false;detOpen=false;ultimo=null}
     view=b.dataset.go2;det=null;render()});
   scr.querySelectorAll('[data-ph]').forEach(el=>el.oninput=e=>{
     AJ.hogar[+el.dataset.ph].n=e.target.value;
@@ -1088,6 +1124,7 @@ function render(){
   scr.querySelectorAll('[data-catopen]').forEach(b=>b.onclick=()=>{catOpen=true;render()});
   scr.querySelectorAll('[data-more]').forEach(b=>b.onclick=()=>{detOpen=!detOpen;render()});
   scr.querySelectorAll('[data-undo]').forEach(b=>b.onclick=deshacer);
+  scr.querySelectorAll('[data-imp]').forEach(b=>b.onclick=()=>{imp=b.dataset.imp==='1';render()});
   scr.querySelectorAll('[data-por]').forEach(b=>b.onclick=()=>{por=b.dataset.por;render()});
   scr.querySelectorAll('[data-cob]').forEach(b=>b.onclick=()=>{cob=+b.dataset.cob;render()});
   scr.querySelectorAll('[data-fon]').forEach(b=>b.onclick=()=>{fon=b.dataset.fon;render()});
@@ -1140,17 +1177,17 @@ function render(){
   scr.scrollTop=(key===lastKey)?y:0; lastKey=key;
 }
 function abrirEdit(k){const g=todos().find(x=>x.k===k);if(!g)return;
-  editKey=k;amt=String(Math.round(g.a));cat=g.cat;por=idPor(g.por)||quienPago(g);cob=g.cob||1;fon=g.fon||'';nota=g.n;
+  editKey=k;amt=String(Math.round(g.a));cat=g.cat;imp=!!g.imp;por=idPor(g.por)||quienPago(g);cob=g.cob||1;fon=g.fon||'';nota=g.n;
   catOpen=false;detOpen=false;ultimo=null;view='edit';det=null;render()}
 async function guardar(){
   const q=modo==='q'?Q[i]:MES[i]+' 2';
   const nom=nota.trim()||CM[cat].n, kk=clave(nom), c=conceptos[kk],
         cb=(c&&cob===1)?(c.cob||1):cob, fn=(c&&!fon)?(c.fon||''):fon;
-  const g={id:uid4(),q,cat,a:+amt,n:nom,por,cob:cb,fon:fn,at:new Date().toISOString()};
+  const g={id:uid4(),q,cat,a:+amt,n:nom,por,cob:cb,fon:fn,imp:imp===true,at:new Date().toISOString()};
   nuevos.push(g);
   if(kk&&(cb>1||fn)&&(!c||c.cob!==cb||c.fon!==fn)){const doc={k:kk,n:nom,cob:cb,fon:fn};conceptos[kk]=doc;
     if(db){try{await db.collection('conceptos').doc(kk).set(doc)}catch(e){}}}
-  ultimo={...g};amt='';cat=null;nota='';cob=1;fon='';por=yoSoy().id;catOpen=false;detOpen=false;
+  ultimo={...g};amt='';cat=null;nota='';cob=1;fon='';por=yoSoy().id;imp=null;catOpen=false;detOpen=false;
   view='reg';lastKey='';render();
   const a=document.getElementById('amt');if(a)a.focus();
   if(db){try{await db.collection('gastos').doc(g.id).set(g);avisaGasto(g.id,'nuevo')}catch(e){}}}
@@ -1160,7 +1197,7 @@ async function deshacer(){if(!ultimo)return;const id=ultimo.id;
   // le queda una notificacion de algo que no existe.
   if(db){try{await avisaGasto(id,'borrado');await db.collection('gastos').doc(id).delete()}catch(e){}}}
 async function guardarEdit(){
-  const upd={cat,a:+amt,n:nota.trim()||CM[cat].n,por,cob,fon},k=editKey;
+  const upd={cat,a:+amt,n:nota.trim()||CM[cat].n,por,cob,fon,imp:imp===true},k=editKey;
   if(k[0]==='s'){overrides[k]={...(overrides[k]||{}),...upd};
     if(db){try{await db.collection('ediciones').doc(k).set({...overrides[k],k})}catch(e){}}}
   else{const j=nuevos.findIndex(x=>x.id===k);
@@ -1537,7 +1574,8 @@ async function cargar(){
 
   nuevos = (ex.data||[]).map(r => ({ id:r.id, q:r.q, cat:r.cat, n:r.nombre, a:+r.monto,
             cob:+r.cobertura||1, fon:r.fund_id||'', por:r.pagado_por||'',
-            cpor:r.creado_por||'', ce:r.creado_en||'' }));
+            cpor:r.creado_por||'', ce:r.creado_en||'',
+            imp:!!r.imprevisto }));
   overrides = {};
 
   fondOv = {}; (fu.data||[]).forEach(r => { fondOv[r.id] =
@@ -1581,7 +1619,7 @@ async function escribir(col, id, v){
     if (col === 'gastos') {
       await sb.from('expenses').upsert({ id, ...H_(), q:v.q, cat:v.cat, nombre:v.n,
         monto:v.a, cobertura:v.cob||1, fund_id:v.fon||null, pagado_por:v.por||null,
-        creado_por: sesion.user.id });
+        imprevisto: !!v.imp, creado_por: sesion.user.id });
     } else if (col === 'fondos') {
       if (v.del) { await sb.from('funds').delete().eq('id', id); }
       else { await sb.from('funds').upsert({ id, ...H_(), nombre:v.n, nota:v.d||'',
@@ -1655,7 +1693,7 @@ async function invitar(email, memberId){
 tabs.onclick = e => {
   const b = e.target.closest('.tab'); if (!b) return;
   const v = b.dataset.go; if (!v) return;
-  if (v === 'reg') { amt=''; cat=null; nota=''; cob=1; fon=''; por=yoSoy().id; catOpen=false; detOpen=false; ultimo=null }
+  if (v === 'reg') { amt=''; cat=null; nota=''; cob=1; fon=''; por=yoSoy().id;imp=null; catOpen=false; detOpen=false; ultimo=null }
   view = v; det = null; render();
 };
 
